@@ -18,6 +18,7 @@ import { renderTracesDeck } from './traces.js';
 import { renderTopologyDeck } from './topology.js';
 import { renderCosmosDeck } from './cosmos.js';
 import { renderSSIMDeck } from './ssim.js';
+import { renderEditorDeck } from './editor.js';
 import { renderDBDeck } from './db.js';
 import { renderDockerDeck } from './docker.js';
 
@@ -233,6 +234,9 @@ function renderActiveDeck() {
       break;
     case 'cosmos':
       renderCosmosDeck(card);
+      break;
+    case 'editor':
+      renderEditorDeck(card);
       break;
     case 'ssim':
       renderSSIMDeck(card);
