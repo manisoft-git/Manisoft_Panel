@@ -4,3 +4,4 @@ node_modules/
 /tmp/
 .manisoft_snapshots/decommissioned/*
 !.manisoft_snapshots/decommissioned/.gitkeep
+.github/
