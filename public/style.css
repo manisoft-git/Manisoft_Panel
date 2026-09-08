@@ -407,17 +407,22 @@ button, .btn-action {
 
 .stealth-toast {
   position: fixed;
-  top: 60px;
+  top: 40px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 229, 255, 0.15);
+  background: #05141f;
   border: 1px solid var(--color-cyan);
   color: var(--color-cyan);
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 10px 18px;
+  border-radius: 6px;
   font-size: 12px;
-  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
-  z-index: 2000;
+  font-weight: bold;
+  font-family: var(--font-mono);
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.4);
+  z-index: 10005;
+  cursor: pointer;
+  max-width: 90vw;
+  text-align: center;
 }
 
 .hidden { display: none !important; }

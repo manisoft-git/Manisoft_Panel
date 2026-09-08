@@ -100,10 +100,19 @@
   <!-- Hardened Login Modal -->
   <div id="login-modal" class="modal-overlay hidden">
     <div class="modal-box">
-      <h2 style="color: var(--color-neon); margin-bottom: 8px;">SOVEREIGN ACCESS CLEARANCE</h2>
-      <p style="color: var(--text-dim); font-size: 11px; margin-bottom: 16px;">
+      <!-- Modal Logo & Diagnostic Row -->
+      <div class="modal-header-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-dim);">
+        <div id="modal-brand-logo" class="brand-logo" style="font-size: 15px; cursor: pointer; user-select: none;" title="Tap or hold 2s to reveal security cycle seed">MANI$OFT // NOC</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="modal-seed-pill" class="pill pill-cyan" style="font-size: 10px; cursor: pointer;" title="Security Seed Diagnostic">DIAG HUD</span>
+          <span id="modal-lock-dot" class="dot-pulse green" style="cursor: pointer;" title="Triple tap or click to inspect seed"></span>
+        </div>
+      </div>
+      <h2 style="color: var(--color-neon); margin-bottom: 6px; font-size: 14px;">SOVEREIGN ACCESS CLEARANCE</h2>
+      <p style="color: var(--text-dim); font-size: 11px; margin-bottom: 14px;">
         Clearance Level 1 Operator: <code>manifestsubeno@gmail.com</code><br>
-        Enter Master Secret combined with dynamic 4-character rolling cycle seed.
+        Enter Master Secret combined with dynamic 4-character rolling cycle seed.<br>
+        <span style="color: var(--color-cyan); font-size: 11px; cursor: pointer; display: inline-block; margin-top: 4px;" id="modal-hint-reveal">💡 <strong>Tap logo, lock dot, or DIAG HUD to reveal cycle seed</strong></span>
       </p>
 
       <form id="login-form">

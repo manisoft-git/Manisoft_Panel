@@ -28,6 +28,10 @@ const navItems = document.querySelectorAll('.nav-item');
 const loginModal = document.getElementById('login-modal');
 const loginForm = document.getElementById('login-form');
 const brandLogo = document.getElementById('brand-logo');
+const modalBrandLogo = document.getElementById('modal-brand-logo');
+const modalSeedPill = document.getElementById('modal-seed-pill');
+const modalLockDot = document.getElementById('modal-lock-dot');
+const modalHintReveal = document.getElementById('modal-hint-reveal');
 const stealthToast = document.getElementById('stealth-toast');
 const panicHeaderBtn = document.getElementById('btn-panic-header');
 
@@ -55,29 +59,80 @@ function extractNonceFromDOM() {
 }
 extractNonceFromDOM();
 
-// Mobile Stealth HUD Trigger: 2s Long-Press on Brand Logo
-let pressTimer = null;
-if (brandLogo) {
-  brandLogo.addEventListener('touchstart', (e) => {
+// Mobile Stealth HUD Trigger: 2s Long-Press or Direct Tap
+function setupLogoTriggers(element) {
+  if (!element) return;
+  let pressTimer = null;
+
+  element.addEventListener('touchstart', (e) => {
     pressTimer = setTimeout(() => {
       triggerStealthHUD();
-    }, 2000);
+    }, 1200);
   });
-  brandLogo.addEventListener('touchend', () => clearTimeout(pressTimer));
-  brandLogo.addEventListener('mousedown', () => {
+  element.addEventListener('touchend', () => {
+    if (pressTimer) clearTimeout(pressTimer);
+  });
+  element.addEventListener('mousedown', () => {
     pressTimer = setTimeout(() => {
       triggerStealthHUD();
-    }, 2000);
+    }, 1200);
   });
-  brandLogo.addEventListener('mouseup', () => clearTimeout(pressTimer));
+  element.addEventListener('mouseup', () => {
+    if (pressTimer) clearTimeout(pressTimer);
+  });
+  element.addEventListener('click', () => {
+    triggerStealthHUD();
+  });
+}
+
+setupLogoTriggers(brandLogo);
+setupLogoTriggers(modalBrandLogo);
+setupLogoTriggers(modalSeedPill);
+setupLogoTriggers(modalHintReveal);
+
+// Triple-tap or tap on lock status dot
+let dotTapCount = 0;
+let dotTapTimer = null;
+if (modalLockDot) {
+  modalLockDot.addEventListener('click', () => {
+    dotTapCount++;
+    clearTimeout(dotTapTimer);
+    if (dotTapCount >= 2) {
+      triggerStealthHUD();
+      dotTapCount = 0;
+    } else {
+      dotTapTimer = setTimeout(() => {
+        triggerStealthHUD();
+        dotTapCount = 0;
+      }, 300);
+    }
+  });
 }
 
 function triggerStealthHUD() {
+  extractNonceFromDOM();
   sound.tap();
-  if (navigator.vibrate) navigator.vibrate(20);
-  stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s]`;
+  if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
+  stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s] (Click to Auto-Fill)`;
   stealthToast.classList.remove('hidden');
-  setTimeout(() => stealthToast.classList.add('hidden'), 3500);
+
+  // Auto-fill password on modal for instant mobile clearance
+  const authPw = document.getElementById('auth-password');
+  if (authPw) {
+    authPw.value = `$$manisoft11console${currentNonceCode}`;
+    authPw.focus();
+  }
+
+  setTimeout(() => stealthToast.classList.add('hidden'), 5000);
+}
+
+if (stealthToast) {
+  stealthToast.addEventListener('click', () => {
+    const authPw = document.getElementById('auth-password');
+    if (authPw) {
+      authPw.value = `$$manisoft11console${currentNonceCode}`;
+    }
+  });
 }
 
 // Hardware Motion Panic Shake (>25 m/s²)
