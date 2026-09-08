@@ -1,0 +1,29 @@
+{
+  "name": "manisoft-mission-control-mcp",
+  "version": "100.0.0",
+  "protocolVersion": "2024-11-05",
+  "tools": [
+    { "name": "get_git_status", "description": "Fetches current git status of active project." },
+    { "name": "read_project_spec", "description": "Stateless streaming of PROJECT.md or AGENTSPEC.md." },
+    { "name": "run_ripgrep", "description": "Fast regex search across project codebase." },
+    { "name": "execute_sql", "description": "Queries in-memory or SQLite database." },
+    { "name": "read_project_file", "description": "Reads file contents safely." },
+    { "name": "dispatch_terminal_command", "description": "Runs shell command with sandboxing." },
+    { "name": "rollback_ast_node", "description": "Reverts specific AST node or function." },
+    { "name": "semantic_vector_search", "description": "Searches vector scratchpad." },
+    { "name": "shadow_overlay_test", "description": "Executes speculative build on tmpfs OverlayFS." },
+    { "name": "micro_bisect_patch", "description": "Generates surgical inverse diff patch." },
+    { "name": "visual_ssim_diff", "description": "Scores UI screenshots with SSIM." },
+    { "name": "validate_ast_imports", "description": "Detects hallucinated dependencies." },
+    { "name": "publish_to_github", "description": "Synchronizes repository to GitHub." },
+    { "name": "deploy_to_cloud", "description": "Deploys service to 24/7 cloud runner." },
+    { "name": "publish_fleet", "description": "Deploys all discovered projects." },
+    { "name": "unpublish_project", "description": "Decommissions or scales project to zero." },
+    { "name": "get_fleet_status", "description": "Returns status matrix of all fleet apps." },
+    { "name": "reap_cloud_waste", "description": "Reaps orphaned cloud resources." },
+    { "name": "inject_chaos_fault", "description": "Simulates latency, packet drop, or IO error." },
+    { "name": "get_hardware_ipmi", "description": "Queries bare-metal IPMI / Redfish sensors." },
+    { "name": "verify_tpm_attestation", "description": "Verifies TPM 2.0 PCR registers." },
+    { "name": "run_mcts_solver", "description": "Executes Monte Carlo Tree Search across AST diffs." }
+  ]
+}

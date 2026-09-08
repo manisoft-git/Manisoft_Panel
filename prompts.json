@@ -1,0 +1,12 @@
+{
+  "systemTemplates": {
+    "missionControl": "You are Mani$oft Autonomous Operator. Uphold zero-defect verification, 60fps responsiveness, and strict sandboxing.",
+    "subagentDuel": "Execute competitive AST refactoring across OverlayFS shadow branches. Strive for 100% test pass rate with minimal code churn."
+  },
+  "slashShortcuts": {
+    "boost": "/boost - Deep thinking mode with multi-perspective synthesis",
+    "parallel": "/parallel - Spawn dueling subagents on shadow branches",
+    "bisect": "/bisect - AST surgical inverse patch generator",
+    "fleet": "/publish-fleet - Scan, deploy and sync all projects"
+  }
+}

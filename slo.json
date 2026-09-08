@@ -1,0 +1,14 @@
+{
+  "service": "Mani$oft-Mission-Control",
+  "targets": {
+    "availability": 99.95,
+    "p99LatencyMs": 50,
+    "maxErrorRatePercent": 0.05
+  },
+  "slidingWindows": {
+    "1h": { "burnRate": 0.0, "budgetRemaining": 100.0 },
+    "6h": { "burnRate": 0.0, "budgetRemaining": 100.0 },
+    "24h": { "burnRate": 0.0, "budgetRemaining": 100.0 },
+    "30d": { "burnRate": 0.0, "budgetRemaining": 100.0 }
+  }
+}

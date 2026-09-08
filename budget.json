@@ -1,0 +1,8 @@
+{
+  "currency": "USD",
+  "maxHourlyBurnRate": 15.00,
+  "maxDailyBudget": 50.00,
+  "currentHourlyBurn": 0.12,
+  "circuitBreakerTripped": false,
+  "actionOnBreach": "kill_api_ingress"
+}

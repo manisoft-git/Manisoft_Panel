@@ -1,0 +1,19 @@
+[Unit]
+Description=Mani$oft Mission Control v100.0 - Sovereign Singularity
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/data/data/com.termux/files/home/MANISOFT/projects/Manisoft_Panel
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+Nice=-10
+MemoryMax=650M
+MemoryHigh=550M
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target

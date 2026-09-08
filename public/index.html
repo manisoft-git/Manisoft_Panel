@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mani$oft // Mission Control v100.0</title>
+  <link rel="manifest" href="/public/manifest.json">
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+<!-- NONCE_INJECTION_POINT -->
+
+  <!-- Top Header Command Bar -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div id="brand-logo" class="brand-logo" title="Long-press for Security Diagnostic HUD">MANI$OFT // NOC</div>
+      <div id="operator-badge" class="operator-badge">
+        <span class="dot-pulse green"></span>
+        <span>OPERATOR: manifestsubeno@gmail.com [VERIFIED]</span>
+      </div>
+    </div>
+
+    <div class="header-telemetry">
+      <canvas id="oscilloscope" width="140" height="28" title="Audio-Reactive Oscilloscope"></canvas>
+      <div class="hud-stat">CPU: <strong id="hud-cpu">0.12</strong></div>
+      <div class="hud-stat">RAM: <strong id="hud-ram">--</strong> MB</div>
+      <div class="hud-stat">PSI: <strong id="hud-psi">0.0%</strong></div>
+      <button id="btn-panic-header" class="btn-danger-sm" title="Instant Stealth Quarantine">🚨 PANIC</button>
+    </div>
+  </header>
+
+  <!-- Main Multi-Deck Workspace Layout -->
+  <div class="main-layout">
+    <!-- Left Navigation Deck -->
+    <aside class="left-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">NOC Multi-Deck Switcher</div>
+        <nav class="deck-nav-list">
+          <button class="nav-item active" data-deck="fleet"><span>🌐 Live Fleet Matrix</span></button>
+          <button class="nav-item" data-deck="terminal"><span>⚡ Terminal NOC Bridge</span></button>
+          <button class="nav-item" data-deck="hardware"><span>📟 Bare-Metal & IPMI</span></button>
+          <button class="nav-item" data-deck="chaos"><span>💥 Chaos Engineering</span></button>
+          <button class="nav-item" data-deck="docker"><span>📦 Containers & Cgroups</span></button>
+          <button class="nav-item" data-deck="db"><span>🗄️ WASM SQLite Studio</span></button>
+          <button class="nav-item" data-deck="git"><span>🐙 AST Git Matrix</span></button>
+          <button class="nav-item" data-deck="packet"><span>🛰️ Packet Flow Tracer</span></button>
+          <button class="nav-item" data-deck="flight"><span>📼 Flight Recorder</span></button>
+          <button class="nav-item" data-deck="traces"><span>📊 Agent Waterfall</span></button>
+          <button class="nav-item" data-deck="cosmos"><span>🌌 Dependency Cosmos</span></button>
+          <button class="nav-item" data-deck="ssim"><span>🖼️ Visual SSIM Arbiter</span></button>
+          <button class="nav-item" data-deck="crash"><span>🔬 Core Dump Analyzer</span></button>
+        </nav>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Global Fast Actions</div>
+        <div class="deck-nav-list">
+          <button id="btn-side-publish" class="btn-primary-sm">⚡ Publish Fleet</button>
+          <button id="btn-side-sync" class="btn-secondary-sm">🐙 Sync GitHub</button>
+          <button id="btn-side-flush" class="btn-ghost-sm">🧹 Flush Memory</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Central Viewport -->
+    <main class="content-viewport" id="deck-viewport">
+      <!-- Active Deck Rendered Here via JS -->
+    </main>
+  </div>
+
+  <!-- Mobile Touch Bar -->
+  <div class="mobile-touch-bar">
+    <button class="touch-key" data-key="MIC">MIC</button>
+    <button class="touch-key" data-key="ESC">ESC</button>
+    <button class="touch-key" data-key="CTRL">Ctrl</button>
+    <button class="touch-key" data-key="ALT">Alt</button>
+    <button class="touch-key" data-key="TAB">TAB</button>
+    <button class="touch-key" data-key="CTRL_C">Ctrl+C</button>
+    <button class="touch-key" data-key="UP">▲</button>
+    <button class="touch-key" data-key="DOWN">▼</button>
+    <button class="touch-key" data-key="|">|</button>
+    <button class="touch-key" data-key="~">~</button>
+    <button class="touch-key" data-key="/">/</button>
+    <button class="touch-key" data-key="`">`</button>
+    <button class="touch-key" data-key="$$">$$</button>
+  </div>
+
+  <!-- Mobile Radial Gesture Dial -->
+  <div class="radial-container">
+    <div id="radial-trigger" class="radial-trigger" title="Radial Quick Actions">❖</div>
+    <div id="radial-dial" class="radial-menu">
+      <button class="radial-btn" data-action="panic" title="Panic Kill">KILL</button>
+      <button class="radial-btn" data-action="flush" title="Flush RAM">RAM</button>
+      <button class="radial-btn" data-action="fleet" title="Fleet Matrix">FLEET</button>
+      <button class="radial-btn" data-action="undo" title="AST Undo">UNDO</button>
+    </div>
+  </div>
+
+  <!-- Hardened Login Modal -->
+  <div id="login-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2 style="color: var(--color-neon); margin-bottom: 8px;">SOVEREIGN ACCESS CLEARANCE</h2>
+      <p style="color: var(--text-dim); font-size: 11px; margin-bottom: 16px;">
+        Clearance Level 1 Operator: <code>manifestsubeno@gmail.com</code><br>
+        Enter Master Secret combined with dynamic 4-character rolling cycle seed.
+      </p>
+
+      <form id="login-form">
+        <!-- Honeypot Trap Field -->
+        <input type="text" id="sys_master_key" name="sys_master_key" style="display:none;" tabindex="-1" autocomplete="off">
+
+        <div style="margin-bottom: 14px;">
+          <input type="password" id="auth-password" class="code-textarea" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border-dim); background: #000; color: var(--color-neon);" placeholder="$$manisoft11consoleXXXX" required autocomplete="current-password">
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button type="button" id="btn-webauthn" class="btn-secondary-sm">🔑 BIOMETRIC AIR-LOCK</button>
+          <button type="submit" class="btn-primary-sm">AUTHENTICATE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stealth HUD Toast -->
+  <div id="stealth-toast" class="stealth-toast hidden"></div>
+
+  <!-- Main SPA Script -->
+  <script type="module" src="/public/app.js"></script>
+</body>
+</html>

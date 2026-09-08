@@ -1,0 +1,14 @@
+[
+  {
+    "id": "wf-self-heal",
+    "name": "Self-Healing Verification Loop",
+    "triggers": ["git-commit", "agent-refactor"],
+    "steps": ["syntax-ast", "json-integrity", "module-resolution", "smoke-test", "fleet-health"]
+  },
+  {
+    "id": "wf-fleet-deploy",
+    "name": "Fleet Cloud Synchronization",
+    "triggers": ["manual", "cron-hourly"],
+    "steps": ["scan-projects", "build-assets", "bind-tunnels", "register-health"]
+  }
+]

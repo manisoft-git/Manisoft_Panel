@@ -1,0 +1,29 @@
+name: Mani$oft Autonomous CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate 5-Layer Verification Suite
+        run: |
+          chmod +x verify-zero-errors.sh
+          ./verify-zero-errors.sh
+
+      - name: Deploy to Cloud Runner
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Triggering cloud runner webhook..."

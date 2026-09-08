@@ -1,0 +1,12 @@
+{
+  "version": "100.0",
+  "pipeline": {
+    "stages": [
+      { "name": "Syntax & AST", "command": "node --check server.js", "timeoutSec": 10 },
+      { "name": "JSON Schema & Registry", "command": "./verify-zero-errors.sh --layer 2", "timeoutSec": 10 },
+      { "name": "Module Resolution", "command": "./verify-zero-errors.sh --layer 3", "timeoutSec": 15 },
+      { "name": "Daemon Smoke Test", "command": "./verify-zero-errors.sh --layer 4", "timeoutSec": 20 },
+      { "name": "Fleet Resilience", "command": "./verify-zero-errors.sh --layer 5", "timeoutSec": 30 }
+    ]
+  }
+}

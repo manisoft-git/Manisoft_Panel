@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-09-08T20:51:27Z",
+  "system": {
+    "hostname": "localhost",
+    "architecture": "aarch64",
+    "kernel": "6.17.0-PRoot-Distro",
+    "cpuCores": 8
+  },
+  "vectorAcceleration": {
+    "avx2": false,
+    "avx512": false,
+    "armNeon": true
+  },
+  "kernelSubsystems": {
+    "ioUring": true,
+    "psi": true,
+    "zram": false
+  },
+  "hardwareAcceleration": {
+    "driAvailable": true,
+    "vulkan": false,
+    "webgpuClientReady": true
+  },
+  "memory": {
+    "totalMb": 3724,
+    "freeMb": 956,
+    "recommendedCgroupMaxMb": 650
+  }
+}

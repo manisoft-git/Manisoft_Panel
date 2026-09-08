@@ -1,0 +1,13 @@
+{
+  "telegram": {
+    "enabled": false,
+    "botToken": "",
+    "chatId": "",
+    "events": ["zero_errors_pass", "security_alert", "fleet_publish", "hitl_required", "unpublish_event"]
+  },
+  "discord": {
+    "enabled": false,
+    "webhookUrl": "",
+    "events": ["system_alert", "budget_threshold", "merkle_commit"]
+  }
+}

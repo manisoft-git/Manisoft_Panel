@@ -1,0 +1,8 @@
+{
+  "clusterName": "manisoft-singularity-swarm",
+  "masterNode": "local-termux",
+  "peers": [
+    { "id": "node-alpha", "endpoint": "127.0.0.1:3000", "role": "primary", "status": "online" }
+  ],
+  "failoverMode": "autonomous-raft"
+}

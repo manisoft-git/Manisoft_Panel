@@ -1,0 +1,6 @@
+[
+  { "id": "m1", "name": "Audit Security & Git", "command": "git status -s && ps aux | head -n 10", "icon": "shield" },
+  { "id": "m2", "name": "Flush Inactive Memory", "command": "sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true", "icon": "cpu" },
+  { "id": "m3", "name": "Scan Fleet Health", "command": "./publish-fleet.sh --check-only", "icon": "grid" },
+  { "id": "m4", "name": "Liberate Ghost Ports", "command": "fuser -k 3000/tcp 5000/tcp 5050/tcp 8080/tcp 8081/tcp 8082/tcp 2>/dev/null || true", "icon": "zap" }
+]

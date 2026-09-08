@@ -1,0 +1,50 @@
+{
+  "lastScanned": "2026-09-08T20:45:00Z",
+  "projects": [
+    {
+      "name": "lumina",
+      "path": "../lumina",
+      "framework": "Flask / Socket.IO",
+      "port": 8080,
+      "status": "configured",
+      "entry": "app.py",
+      "publicUrl": "http://127.0.0.1:8080"
+    },
+    {
+      "name": "passmaster_ai",
+      "path": "../passmaster_ai",
+      "framework": "Flask / AI Engine",
+      "port": 5050,
+      "status": "configured",
+      "entry": "app.py",
+      "publicUrl": "http://127.0.0.1:5050"
+    },
+    {
+      "name": "starshine",
+      "path": "../starshine",
+      "framework": "Flask / Python",
+      "port": 5000,
+      "status": "configured",
+      "entry": "app.py",
+      "publicUrl": "http://127.0.0.1:5000"
+    },
+    {
+      "name": "strike_ops",
+      "path": "../strike_ops",
+      "framework": "HTML5 / Python HTTP",
+      "port": 8081,
+      "status": "configured",
+      "entry": "server.py",
+      "publicUrl": "http://127.0.0.1:8081"
+    },
+    {
+      "name": "subway_surfers",
+      "path": "../subway_surfers",
+      "framework": "HTML5 / Python HTTP",
+      "port": 8082,
+      "status": "configured",
+      "entry": "server.py",
+      "publicUrl": "http://127.0.0.1:8082"
+    }
+  ]
+}

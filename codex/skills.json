@@ -1,0 +1,7 @@
+[
+  { "id": "sk-1", "name": "eBPF-XDP-Guard", "category": "network", "status": "active" },
+  { "id": "sk-2", "name": "OverlayFS-Shadow-Tester", "category": "virtualization", "status": "active" },
+  { "id": "sk-3", "name": "AST-Hallucination-Linter", "category": "intelligence", "status": "active" },
+  { "id": "sk-4", "name": "Genetic-MCTS-Solver", "category": "reasoning", "status": "active" },
+  { "id": "sk-5", "name": "WASM-SQLite-Synchronizer", "category": "storage", "status": "active" }
+]

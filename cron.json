@@ -1,0 +1,6 @@
+[
+  { "id": "cron-1", "name": "Zombie Reaper", "schedule": "*/5 * * * *", "action": "reap_orphans" },
+  { "id": "cron-2", "name": "Memory Compaction", "schedule": "*/15 * * * *", "action": "compact_memory" },
+  { "id": "cron-3", "name": "Fleet Health Probe", "schedule": "* * * * *", "action": "probe_fleet" },
+  { "id": "cron-4", "name": "Merkle Ledger Checkpoint", "schedule": "0 * * * *", "action": "checkpoint_merkle" }
+]
