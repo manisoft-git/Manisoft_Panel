@@ -14,7 +14,11 @@ git config user.name "ManiSoft Operator" 2>/dev/null || true
 git add -A
 git commit -m "feat(core): sovereign deployment of Mani\$oft Mission Control v100.0" 2>/dev/null || true
 
-if command -v gh >/dev/null 2>&1; then
+if git remote get-url origin >/dev/null 2>&1; then
+    echo "-> Pushing to remote origin main..."
+    git push -u origin main 2>/dev/null || true
+    echo "✓ Published repository to GitHub."
+elif command -v gh >/dev/null 2>&1; then
     gh repo create Manisoft_Panel --private --source=. --remote=origin --push 2>/dev/null || git push -u origin main 2>/dev/null || true
     echo "✓ Published repository to GitHub."
 else

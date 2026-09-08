@@ -15,9 +15,9 @@ fi
 echo "=== [MANI\$OFT] AUTONOMOUS MULTI-PROJECT FLEET SCANNER & PUBLISHER ==="
 echo "Scanning directory: $PROJECTS_ROOT"
 
-PROJECTS=(lumina passmaster_ai starshine strike_ops subway_surfers)
-PORT_MAP=(8080 5050 5000 8081 8082)
-FRAMEWORKS=("Flask / Socket.IO" "Flask / AI Engine" "Flask / Python" "HTML5 / Python HTTP" "HTML5 / Python HTTP")
+PROJECTS=(lumina passmaster_ai starshine strike_ops subway_surfers aether-transport)
+PORT_MAP=(8080 5050 5000 8081 8082 9090)
+FRAMEWORKS=("Flask / Socket.IO" "Flask / AI Engine" "Flask / Python" "HTML5 / Python HTTP" "HTML5 / Python HTTP" "Rust / Tokio Mesh")
 
 for i in "${!PROJECTS[@]}"; do
     NAME="${PROJECTS[$i]}"
@@ -34,6 +34,8 @@ for i in "${!PROJECTS[@]}"; do
                     (cd "$PROJ_DIR" && PORT=$PORT nohup python3 app.py > /tmp/"${NAME}".log 2>&1 &) || true
                 elif [ -f "$PROJ_DIR/server.py" ]; then
                     (cd "$PROJ_DIR" && PORT=$PORT nohup python3 server.py > /tmp/"${NAME}".log 2>&1 &) || true
+                elif [ -f "$PROJ_DIR/Cargo.toml" ]; then
+                    echo "      [✓] Rust workspace configured for $NAME."
                 fi
             else
                 echo "      [✓] Instance active on port $PORT."

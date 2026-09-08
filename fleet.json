@@ -45,6 +45,15 @@
       "status": "configured",
       "entry": "server.py",
       "publicUrl": "http://127.0.0.1:8082"
+    },
+    {
+      "name": "aether-transport",
+      "path": "../aether-transport",
+      "framework": "Rust / Tokio Mesh",
+      "port": 9090,
+      "status": "configured",
+      "entry": "Cargo.toml",
+      "publicUrl": "http://127.0.0.1:9090"
     }
   ]
 }

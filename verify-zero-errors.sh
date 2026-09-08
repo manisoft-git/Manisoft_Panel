@@ -143,7 +143,7 @@ fi
 if [[ "$LAYER" == "all" || "$LAYER" == "5" ]]; then
     echo "[LAYER 5/5] Sibling Fleet Health & Reachability Inspection..."
     FLEET_COUNT=0
-    for proj in ../lumina ../passmaster_ai ../starshine ../strike_ops ../subway_surfers; do
+    for proj in ../lumina ../passmaster_ai ../starshine ../strike_ops ../subway_surfers ../aether-transport; do
         if [ -d "$proj" ]; then
             FLEET_COUNT=$(( FLEET_COUNT + 1 ))
             echo "  [+] Sibling project verified: $(basename "$proj")"
