@@ -65,7 +65,41 @@ function extractNonceFromDOM() {
   }
 }
 
-async function updateSeedDisplay() {
+// Phone & Tablet Hardware Detection Engine
+function isPhoneOrTablet() {
+  const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+  const isMobileUA = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet|silk|kindle/i.test(ua);
+  const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  return isMobileUA || (hasTouch && isCoarse) || (hasTouch && window.innerWidth <= 1024);
+}
+
+let seedRevealTimeout = null;
+
+function hideSeedDisplay() {
+  const hudSeedEl = document.getElementById('hud-seed');
+  if (hudSeedEl) hudSeedEl.textContent = '----';
+  const modalSeedBadgeEl = document.getElementById('modal-seed-badge');
+  if (modalSeedBadgeEl) modalSeedBadgeEl.textContent = '----';
+  const modalInlineSeedEl = document.getElementById('modal-inline-seed');
+  if (modalInlineSeedEl) modalInlineSeedEl.textContent = '----';
+  if (stealthToast) stealthToast.classList.add('hidden');
+}
+
+// STRICT RULE: Seed only reveals when logo is clicked on phone or tablets
+async function revealSeedOnMobile() {
+  // If desktop PC / laptop: DO NOT show seed on screen
+  if (!isPhoneOrTablet()) {
+    sound.tap();
+    if (stealthToast) {
+      stealthToast.textContent = '[DESKTOP AIR-LOCK // SEED OBFUSCATED: INSPECT SOURCE Ctrl+U]';
+      stealthToast.classList.remove('hidden');
+      setTimeout(() => stealthToast.classList.add('hidden'), 4000);
+    }
+    return;
+  }
+
+  // On Phone or Tablet: Fetch freshest rolling seed
   extractNonceFromDOM();
   try {
     const res = await fetch('/api/seed');
@@ -78,16 +112,38 @@ async function updateSeedDisplay() {
   } catch (e) {
     // fallback to DOM extraction
   }
+
+  sound.tap();
+  if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
+
+  // Reveal seed on screen
   const hudSeedEl = document.getElementById('hud-seed');
   if (hudSeedEl) hudSeedEl.textContent = currentNonceCode;
   const modalSeedBadgeEl = document.getElementById('modal-seed-badge');
   if (modalSeedBadgeEl) modalSeedBadgeEl.textContent = currentNonceCode;
   const modalInlineSeedEl = document.getElementById('modal-inline-seed');
   if (modalInlineSeedEl) modalInlineSeedEl.textContent = currentNonceCode;
-}
-updateSeedDisplay();
 
-// Mobile Stealth HUD Trigger: 2s Long-Press or Direct Tap
+  if (stealthToast) {
+    stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s]`;
+    stealthToast.classList.remove('hidden');
+  }
+
+  // Auto-hide after 8 seconds (reverts to ---- for security)
+  clearTimeout(seedRevealTimeout);
+  seedRevealTimeout = setTimeout(() => {
+    hideSeedDisplay();
+  }, 8000);
+}
+
+const triggerStealthHUD = revealSeedOnMobile;
+const updateSeedDisplay = revealSeedOnMobile;
+
+// On Initial Boot: Seed remains masked as '----'
+extractNonceFromDOM();
+hideSeedDisplay();
+
+// Logo Triggers: Direct Tap or Long-Press
 function setupLogoTriggers(element) {
   if (!element) return;
   let pressTimer = null;
@@ -102,8 +158,8 @@ function setupLogoTriggers(element) {
 
   element.addEventListener('touchstart', (e) => {
     pressTimer = setTimeout(() => {
-      triggerStealthHUD();
-    }, 1200);
+      revealSeedOnMobile();
+    }, 800);
   }, { passive: true });
 
   element.addEventListener('touchmove', () => {
@@ -117,14 +173,14 @@ function setupLogoTriggers(element) {
   });
   element.addEventListener('mousedown', () => {
     pressTimer = setTimeout(() => {
-      triggerStealthHUD();
-    }, 1200);
+      revealSeedOnMobile();
+    }, 800);
   });
   element.addEventListener('mouseup', () => {
     if (pressTimer) clearTimeout(pressTimer);
   });
   element.addEventListener('click', () => {
-    triggerStealthHUD();
+    revealSeedOnMobile();
   });
 }
 
@@ -139,7 +195,7 @@ if (brandSectionEl) {
   brandSectionEl.addEventListener('selectstart', (e) => e.preventDefault());
 }
 
-// Tap on lock status dot to refresh/inspect seed
+// Tap on lock status dot to trigger on mobile
 let dotTapCount = 0;
 let dotTapTimer = null;
 if (modalLockDot) {
@@ -147,31 +203,20 @@ if (modalLockDot) {
     dotTapCount++;
     clearTimeout(dotTapTimer);
     if (dotTapCount >= 2) {
-      triggerStealthHUD();
+      revealSeedOnMobile();
       dotTapCount = 0;
     } else {
       dotTapTimer = setTimeout(() => {
-        triggerStealthHUD();
+        revealSeedOnMobile();
         dotTapCount = 0;
       }, 300);
     }
   });
 }
 
-async function triggerStealthHUD() {
-  await updateSeedDisplay();
-  sound.tap();
-  if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
-  if (stealthToast) {
-    stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s]`;
-    stealthToast.classList.remove('hidden');
-    setTimeout(() => stealthToast.classList.add('hidden'), 5000);
-  }
-}
-
 if (stealthToast) {
   stealthToast.addEventListener('click', () => {
-    stealthToast.classList.add('hidden');
+    hideSeedDisplay();
   });
 }
 
