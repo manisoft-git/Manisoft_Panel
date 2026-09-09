@@ -2,7 +2,7 @@
  * ==============================================================================
  * MANI$OFT // MISSION CONTROL v100.0 - SOVEREIGN SINGULARITY OMNI-NEXUS FINALITY
  * Autonomous Self-Healing Zero-Defect NOC Kernel & Multi-Project Hypervisor
- * Operator: manifestsubeno@gmail.com // Master Secret: $$manisoft11console
+ * Operator: manifestsubeno@gmail.com // Level 1 Clearance Clearance
  * ==============================================================================
  */
 
@@ -378,6 +378,15 @@ const server = http.createServer(async (req, res) => {
       uptime: process.uptime(),
       memoryMb: Math.round(process.memoryUsage().rss / (1024 * 1024)),
       zeroTrustBypass: !!isZeroTrustBypass
+    });
+  }
+
+  // REST API: Seed Telemetry (Returns active rolling cycle seed)
+  if (pathname === '/api/seed') {
+    rotateNonceIfExpired();
+    return sendJSON(res, {
+      seed: currentNonce.code,
+      expiresAt: currentNonce.expiresAt
     });
   }
 

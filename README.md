@@ -9,7 +9,7 @@
  ║  ██║ ╚═╝ ██║██║  ██║██║ ╚████║██║███████║╚██████╔╝██║        ██║                    ║
  ║  ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚══════╝ ╚═════╝ ╚═╝        ╚═╝                    ║
  ╚══════════════════════════════════════════════════════════════════════════════════════╝
- [ OPERATOR: manifestsubeno@gmail.com // MASTER SECRET: $$manisoft11console ]
+ [ OPERATOR: manifestsubeno@gmail.com // CLEARANCE: LEVEL 1 ]
 ```
 
 A production-ready, fault-tolerant, sovereign developer mission control, threat intelligence radar, UI design engineering lab, database studio, container hypervisor, API testing suite, autonomous AI operations hub, swarm tournament engine, multi-cloud project deprovisioning suite, autonomous multi-project fleet publishing engine, and self-healing zero-defect verification platform.
@@ -48,7 +48,7 @@ A production-ready, fault-tolerant, sovereign developer mission control, threat 
 1. **Sliding-Window Rolling Ghost Password Engine:**
    - Cryptographically random 4-character alphanumeric nonce (e.g. `7F4B`) generated every 180 seconds.
    - Dual-window memory ensures seamless transitions without race condition lockouts.
-   - Password format: `$$manisoft11console<NONCE>`.
+   - Password format: `<MASTER_SECRET><NONCE>`.
    - View-source injection (`Ctrl + U`) or mobile 2-second long-press on logo reveals active seed.
 
 2. **Autonomous Multi-Project Fleet Hypervisor:**

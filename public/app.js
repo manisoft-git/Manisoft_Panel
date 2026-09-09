@@ -65,8 +65,19 @@ function extractNonceFromDOM() {
   }
 }
 
-function updateSeedDisplay() {
+async function updateSeedDisplay() {
   extractNonceFromDOM();
+  try {
+    const res = await fetch('/api/seed');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.seed) {
+        currentNonceCode = data.seed;
+      }
+    }
+  } catch (e) {
+    // fallback to DOM extraction
+  }
   const hudSeedEl = document.getElementById('hud-seed');
   if (hudSeedEl) hudSeedEl.textContent = currentNonceCode;
   const modalSeedBadgeEl = document.getElementById('modal-seed-badge');
@@ -147,13 +158,21 @@ if (modalLockDot) {
   });
 }
 
-function triggerStealthHUD() {
-  updateSeedDisplay();
+async function triggerStealthHUD() {
+  await updateSeedDisplay();
   sound.tap();
   if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
-  stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s]`;
-  stealthToast.classList.remove('hidden');
-  setTimeout(() => stealthToast.classList.add('hidden'), 5000);
+  if (stealthToast) {
+    stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s]`;
+    stealthToast.classList.remove('hidden');
+    setTimeout(() => stealthToast.classList.add('hidden'), 5000);
+  }
+}
+
+if (stealthToast) {
+  stealthToast.addEventListener('click', () => {
+    stealthToast.classList.add('hidden');
+  });
 }
 
 // Hardware Motion Panic Shake (>25 m/s²)
