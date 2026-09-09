@@ -391,6 +391,7 @@ function renderActiveDeck() {
 
 let terminalMode = 'antigravity'; // 'antigravity' or 'bash'
 let voiceReplyEnabled = true;
+let thinkingEnabled = true;
 let isRecordingVoice = false;
 let speechRecognizer = null;
 
@@ -582,13 +583,27 @@ async function sendManiDialogue(promptText) {
     const res = await fetch('/api/mani/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptText, continue: true })
+      body: JSON.stringify({ prompt: promptText, continue: true, showThinking: thinkingEnabled })
     });
     const data = await res.json();
     const reply = data.output || data.reply || data.error || 'No response produced.';
+    const thought = data.thought || '';
+
+    let thoughtHtml = '';
+    if (thought && thinkingEnabled) {
+      thoughtHtml = `
+        <details class="comm-thought-box" open>
+          <summary class="comm-thought-summary">
+            <span>💭 Thinking Process</span>
+            <span class="thought-badge">REASONING</span>
+          </summary>
+          <div class="comm-thought-body">${escapeHtml(thought)}</div>
+        </details>
+      `;
+    }
 
     const formattedReply = escapeHtml(reply).replace(/\n/g, '<br>');
-    aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div><div>${formattedReply}</div>`;
+    aiBubble.innerHTML = `${thoughtHtml}<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div><div>${formattedReply}</div>`;
 
     if (data.success !== false) {
       sound.success();
@@ -616,6 +631,7 @@ function renderTerminalNOC(containerEl) {
         <span id="term-mode-toggle" class="pill ${isAgy ? 'pill-cyan' : 'pill-green'} terminal-mode-toggle" title="Click to toggle between MANI AI and Bash shell">
           ${isAgy ? '🤖 MODE: MANI AI' : '⚡ MODE: BASH SHELL'}
         </span>
+        ${isAgy ? `<button id="btn-term-thinking-toggle" class="btn-ghost-sm" title="Toggle thinking / reasoning process display">${thinkingEnabled ? '💭 THINKING: ON' : '💭 THINKING: OFF'}</button>` : ''}
         <button id="btn-voice-toggle" class="btn-ghost-sm" title="Toggle audio spoken response">${voiceReplyEnabled ? '🔊 VOICE: ON' : '🔈 VOICE: OFF'}</button>
       </div>
     </div>
@@ -637,6 +653,17 @@ function renderTerminalNOC(containerEl) {
   const termSend = containerEl.querySelector('#btn-term-send');
   const modeToggle = containerEl.querySelector('#term-mode-toggle');
   const voiceToggle = containerEl.querySelector('#btn-voice-toggle');
+  const termThinkingToggle = containerEl.querySelector('#btn-term-thinking-toggle');
+
+  if (termThinkingToggle) {
+    termThinkingToggle.addEventListener('click', () => {
+      sound.tap();
+      thinkingEnabled = !thinkingEnabled;
+      termThinkingToggle.textContent = thinkingEnabled ? '💭 THINKING: ON' : '💭 THINKING: OFF';
+      const btnComm = document.getElementById('btn-comm-thinking-toggle');
+      if (btnComm) btnComm.textContent = thinkingEnabled ? '💭 THINKING: ON' : '💭 THINKING: OFF';
+    });
+  }
 
   if (voiceToggle) {
     voiceToggle.addEventListener('click', () => {
@@ -676,11 +703,14 @@ function renderTerminalNOC(containerEl) {
         const res = await fetch('/api/mcp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'ask_mani', params: { prompt: cleanPrompt } })
+          body: JSON.stringify({ method: 'ask_mani', params: { prompt: cleanPrompt, showThinking: thinkingEnabled } })
         });
         const data = await res.json();
         termOut.textContent = termOut.textContent.replace(`[MANI AI // REASONING & EXECUTING...]\n`, '');
         if (data.result && (data.result.output || data.result.reply)) {
+          if (data.result.thought && thinkingEnabled) {
+            termOut.textContent += `[THINKING PROCESS]\n${data.result.thought}\n[/THINKING PROCESS]\n\n`;
+          }
           const reply = data.result.output || data.result.reply;
           termOut.textContent += `🤖 MANI AI:\n${reply}\n\n`;
           speakManiResponse(reply);
@@ -793,6 +823,17 @@ if (btnAgyComm) {
 const btnCommClose = document.getElementById('btn-comm-close');
 if (btnCommClose) {
   btnCommClose.addEventListener('click', closeManiModal);
+}
+
+const btnCommThinkingToggle = document.getElementById('btn-comm-thinking-toggle');
+if (btnCommThinkingToggle) {
+  btnCommThinkingToggle.addEventListener('click', () => {
+    sound.tap();
+    thinkingEnabled = !thinkingEnabled;
+    btnCommThinkingToggle.textContent = thinkingEnabled ? '💭 THINKING: ON' : '💭 THINKING: OFF';
+    const btnTerm = document.getElementById('btn-term-thinking-toggle');
+    if (btnTerm) btnTerm.textContent = thinkingEnabled ? '💭 THINKING: ON' : '💭 THINKING: OFF';
+  });
 }
 
 const btnCommVoiceToggle = document.getElementById('btn-comm-voice-toggle');

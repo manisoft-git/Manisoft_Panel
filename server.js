@@ -251,22 +251,53 @@ const mimeTypes = {
   '.ico': 'image/x-icon'
 };
 
-// MANI AI Subsystem Bridge (Autonomous Agent Engine with Full Read/Write Fleet Permissions)
-async function callManiAI(prompt, conversationMode = true) {
+// MANI AI Subsystem Bridge (Autonomous Agent Engine with Full Read/Write Fleet Permissions & Thought Streaming)
+async function callManiAI(prompt, conversationMode = true, showThinking = true) {
   return new Promise((resolve) => {
     const agyBin = fs.existsSync('/root/.local/bin/agy') ? '/root/.local/bin/agy' : 'agy';
     const cleanPrompt = (prompt || 'Hello MANI AI').trim();
-    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${PROJECTS_DIR} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]\n\n${cleanPrompt}`;
+    const thinkingInstruction = showThinking
+      ? '\n[CRITICAL INSTRUCTION: You MUST begin your reply with your step-by-step reasoning, fleet code inspection, and execution plan enclosed in <thought>...</thought> tags. After the closing </thought> tag, provide your direct response to Manifest.]'
+      : '';
+    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${PROJECTS_DIR} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]${thinkingInstruction}\n\n${cleanPrompt}`;
 
     const args = [
       '-p', systemIdentity,
       '--dangerously-skip-permissions',
       '--add-dir', PROJECTS_DIR,
-      '--effort', 'low'
+      '--effort', showThinking ? 'medium' : 'low'
     ];
     if (conversationMode) {
       args.push('--continue');
     }
+
+    const parseThoughtAndOutput = (rawText) => {
+      let thought = '';
+      let output = rawText;
+      const thoughtMatch = rawText.match(/<thought>([\s\S]*?)<\/thought>/i)
+        || rawText.match(/<thinking>([\s\S]*?)<\/thinking>/i)
+        || rawText.match(/\[(?:THOUGHT|THINKING)\]([\s\S]*?)\[\/(?:THOUGHT|THINKING)\]/i)
+        || rawText.match(/```(?:thought|thinking)\n([\s\S]*?)```/i);
+      if (thoughtMatch) {
+        thought = thoughtMatch[1].trim();
+        output = rawText
+          .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+          .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+          .replace(/\[(?:THOUGHT|THINKING)\][\s\S]*?\[\/(?:THOUGHT|THINKING)\]/gi, '')
+          .replace(/```(?:thought|thinking)\n[\s\S]*?```/gi, '')
+          .trim();
+        if (!output && thought) {
+          output = 'Execution completed.';
+        }
+      } else {
+        const unclosedMatch = rawText.match(/<(?:thought|thinking)>([\s\S]*)$/i);
+        if (unclosedMatch) {
+          thought = unclosedMatch[1].trim();
+          output = rawText.replace(/<(?:thought|thinking)>[\s\S]*$/gi, '').trim() || 'Execution completed.';
+        }
+      }
+      return { thought, output: output || rawText };
+    };
 
     const startTime = Date.now();
     child_process.execFile(agyBin, args, {
@@ -283,7 +314,7 @@ async function callManiAI(prompt, conversationMode = true) {
             '-p', systemIdentity,
             '--dangerously-skip-permissions',
             '--add-dir', PROJECTS_DIR,
-            '--effort', 'low'
+            '--effort', showThinking ? 'medium' : 'low'
           ], {
             cwd: PROJECTS_DIR,
             timeout: 180000,
@@ -293,16 +324,22 @@ async function callManiAI(prompt, conversationMode = true) {
           }, (retryErr, retryStdout, retryStderr) => {
             const outText = (retryStdout || '') + (retryStderr || '');
             if (retryErr) {
+              const parsed = parseThoughtAndOutput(outText);
               resolve({
                 success: false,
-                output: outText.trim() || retryErr.message || 'MANI AI execution failed',
+                output: parsed.output || retryErr.message || 'MANI AI execution failed',
+                thought: parsed.thought,
                 error: retryErr.message,
                 latencyMs: Date.now() - startTime
               });
             } else {
+              const fullOut = retryStdout.trim() || retryStderr.trim();
+              const parsed = parseThoughtAndOutput(fullOut);
               resolve({
                 success: true,
-                output: retryStdout.trim() || retryStderr.trim(),
+                output: parsed.output,
+                thought: parsed.thought,
+                raw: fullOut,
                 latencyMs: Date.now() - startTime
               });
             }
@@ -310,17 +347,22 @@ async function callManiAI(prompt, conversationMode = true) {
           return;
         }
         const outText = (stdout || '') + (stderr || '');
+        const parsed = parseThoughtAndOutput(outText);
         resolve({
           success: false,
-          output: outText.trim() || err.message || 'MANI AI execution failed',
+          output: parsed.output || err.message || 'MANI AI execution failed',
+          thought: parsed.thought,
           error: err.message,
           latencyMs: Date.now() - startTime
         });
       } else {
         const out = stdout.trim() || stderr.trim();
+        const parsed = parseThoughtAndOutput(out);
         resolve({
           success: true,
-          output: out,
+          output: parsed.output,
+          thought: parsed.thought,
+          raw: out,
           latencyMs: Date.now() - startTime
         });
       }
@@ -569,7 +611,8 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, { success: false, error: 'Empty prompt provided' }, 400);
     }
     const conversationMode = body.continue !== false;
-    const aiResult = await callManiAI(prompt, conversationMode);
+    const showThinking = body.showThinking !== false;
+    const aiResult = await callManiAI(prompt, conversationMode, showThinking);
     recordAuditEntry('MANI_AI_CHAT_INTERACTION', { prompt: prompt.slice(0, 100), success: aiResult.success });
     return sendJSON(res, aiResult);
   }
@@ -591,8 +634,9 @@ const server = http.createServer(async (req, res) => {
       }
     } else if (method === 'ask_mani' || method === 'ask_antigravity') {
       const prompt = params.prompt || 'Hello MANI AI';
-      const aiRes = await callManiAI(prompt, true);
-      result = { output: aiRes.output, success: aiRes.success, error: aiRes.error };
+      const showThinking = params.showThinking !== false;
+      const aiRes = await callManiAI(prompt, true, showThinking);
+      result = { output: aiRes.output, thought: aiRes.thought, success: aiRes.success, error: aiRes.error };
     } else if (method === 'dispatch_terminal_command') {
       try {
         const cmd = params.command || 'echo ok';

@@ -536,3 +536,60 @@ button, .btn-action {
   padding: 3px 8px;
   border-radius: 4px;
 }
+
+/* MANI AI Thinking Process Accordion */
+.comm-thought-box {
+  background: rgba(5, 18, 28, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-left: 3px solid var(--color-cyan);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #94a3b8;
+  overflow: hidden;
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.08);
+}
+
+.comm-thought-summary {
+  padding: 6px 10px;
+  background: rgba(0, 229, 255, 0.08);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  color: var(--color-cyan);
+  font-weight: bold;
+  font-size: 11px;
+  transition: background 0.15s;
+}
+
+.comm-thought-summary:hover {
+  background: rgba(0, 229, 255, 0.16);
+}
+
+.thought-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 229, 255, 0.2);
+  color: var(--color-cyan);
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.comm-thought-body {
+  padding: 8px 12px;
+  line-height: 1.5;
+  border-top: 1px solid rgba(0, 229, 255, 0.15);
+  max-height: 260px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.comm-thought-box[open] .comm-thought-summary {
+  border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+}
