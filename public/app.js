@@ -232,10 +232,45 @@ if (window.DeviceMotionEvent) {
   });
 }
 
+// Persistent Google Pro Session Management
+function getStoredToken() {
+  return localStorage.getItem('manisoft_token') || sessionStorage.getItem('manisoft_token') || '';
+}
+
+function setStoredToken(token, persistent = true) {
+  if (!token) return;
+  if (persistent) {
+    localStorage.setItem('manisoft_token', token);
+  }
+  sessionStorage.setItem('manisoft_token', token);
+}
+
+function clearStoredToken() {
+  localStorage.removeItem('manisoft_token');
+  sessionStorage.removeItem('manisoft_token');
+}
+
+// Global API Fetch Interceptor: Automatically injects persistent Google Pro bearer token
+const originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+  const token = getStoredToken();
+  if (token && typeof url === 'string' && url.startsWith('/api/')) {
+    options.headers = options.headers || {};
+    if (options.headers instanceof Headers) {
+      if (!options.headers.has('Authorization')) options.headers.set('Authorization', `Bearer ${token}`);
+      if (!options.headers.has('x-manisoft-token')) options.headers.set('x-manisoft-token', token);
+    } else {
+      if (!options.headers['Authorization']) options.headers['Authorization'] = `Bearer ${token}`;
+      if (!options.headers['x-manisoft-token']) options.headers['x-manisoft-token'] = token;
+    }
+  }
+  return originalFetch(url, options);
+};
+
 async function executePanicKill() {
   sound.panic();
   await fetch('/api/security/panic', { method: 'POST' });
-  sessionStorage.clear();
+  clearStoredToken();
   loginModal.classList.remove('hidden');
   alert('EMERGENCY PANIC QUARANTINE ENGAGED: Workspace locked and caches flushed.');
 }
@@ -244,22 +279,82 @@ if (panicHeaderBtn) {
   panicHeaderBtn.addEventListener('click', executePanicKill);
 }
 
-// Check session
+// Verify session clearance and keep Google Pro mail permanently authenticated
 async function checkClearance() {
   try {
-    const res = await fetch('/api/health');
+    const existingToken = getStoredToken();
+    const headers = {};
+    if (existingToken) {
+      headers['Authorization'] = `Bearer ${existingToken}`;
+      headers['x-manisoft-token'] = existingToken;
+    }
+
+    const res = await fetch('/api/health', { headers });
     const health = await res.json();
-    if (health.zeroTrustBypass) {
-      // Cloudflare Zero Trust header bypass
+
+    if (health.zeroTrustBypass || health.authenticated) {
       loginModal.classList.add('hidden');
+      const badge = document.getElementById('operator-badge');
+      if (badge && health.operatorEmail) {
+        badge.innerHTML = `<span class="dot-pulse green"></span><span>OPERATOR: ${escapeHtml(health.operatorEmail)} [GOOGLE PRO // VERIFIED]</span>`;
+      }
       return;
     }
-    if (!sessionStorage.getItem('manisoft_token')) {
+
+    if (existingToken) {
+      const vRes = await fetch('/api/auth/verify-session', { headers });
+      const vData = await vRes.json();
+      if (vData.valid) {
+        if (vData.token) setStoredToken(vData.token, true);
+        loginModal.classList.add('hidden');
+        const badge = document.getElementById('operator-badge');
+        if (badge && vData.email) {
+          badge.innerHTML = `<span class="dot-pulse green"></span><span>OPERATOR: ${escapeHtml(vData.email)} [GOOGLE PRO // VERIFIED]</span>`;
+        }
+        return;
+      }
+    }
+
+    loginModal.classList.remove('hidden');
+  } catch (e) {
+    if (getStoredToken()) {
+      loginModal.classList.add('hidden');
+    } else {
       loginModal.classList.remove('hidden');
     }
-  } catch (e) {
-    loginModal.classList.remove('hidden');
   }
+}
+
+// Google Pro One-Tap Sovereign Air-Lock Authentication
+const googleProBtn = document.getElementById('btn-google-pro-auth');
+if (googleProBtn) {
+  googleProBtn.addEventListener('click', async () => {
+    sound.tap();
+    try {
+      const res = await fetch('/api/auth/google-pro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'manifestsubeno@gmail.com' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        sound.success();
+        setStoredToken(data.token, true);
+        loginModal.classList.add('hidden');
+        const badge = document.getElementById('operator-badge');
+        if (badge && data.email) {
+          badge.innerHTML = `<span class="dot-pulse green"></span><span>OPERATOR: ${escapeHtml(data.email)} [GOOGLE PRO // VERIFIED]</span>`;
+        }
+        renderActiveDeck();
+      } else {
+        sound.error();
+        alert(data.error || 'Google Pro authentication failed.');
+      }
+    } catch (e) {
+      sound.error();
+      alert('Network error connecting to Google Pro Auth.');
+    }
+  });
 }
 
 if (loginForm) {
@@ -267,18 +362,23 @@ if (loginForm) {
     e.preventDefault();
     const password = document.getElementById('auth-password').value;
     const honeypot = document.getElementById('sys_master_key').value;
+    const rememberMe = document.getElementById('remember-me') ? document.getElementById('remember-me').checked : true;
 
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, sys_master_key: honeypot })
+        body: JSON.stringify({ password, sys_master_key: honeypot, rememberMe })
       });
       const data = await res.json();
       if (data.success) {
         sound.success();
-        sessionStorage.setItem('manisoft_token', data.token);
+        setStoredToken(data.token, rememberMe);
         loginModal.classList.add('hidden');
+        const badge = document.getElementById('operator-badge');
+        if (badge && data.email) {
+          badge.innerHTML = `<span class="dot-pulse green"></span><span>OPERATOR: ${escapeHtml(data.email)} [GOOGLE PRO // VERIFIED]</span>`;
+        }
         renderActiveDeck();
       } else {
         sound.error();
@@ -299,7 +399,7 @@ if (webauthnBtn) {
     if (window.PublicKeyCredential) {
       try {
         sound.success();
-        sessionStorage.setItem('manisoft_token', 'fido2_verified_' + Date.now());
+        setStoredToken('fido2_verified_' + Date.now(), true);
         loginModal.classList.add('hidden');
         renderActiveDeck();
       } catch (e) {

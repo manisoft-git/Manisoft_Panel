@@ -5,3 +5,8 @@ node_modules/
 .manisoft_snapshots/decommissioned/*
 !.manisoft_snapshots/decommissioned/.gitkeep
 .github/
+.*.pid
+.watchdog_loop.sh
+PUBLIC_ONLINE_URL.txt
+.manisoft_sessions.json
+
