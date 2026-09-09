@@ -49,12 +49,24 @@ body {
   flex-wrap: wrap;
   gap: 10px;
   z-index: 100;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .brand-section {
   display: flex;
   align-items: center;
   gap: 12px;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .brand-logo {
@@ -64,7 +76,13 @@ body {
   letter-spacing: 1px;
   text-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
   cursor: pointer;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
+  touch-action: manipulation;
 }
 
 .operator-badge {
@@ -77,6 +95,12 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .header-telemetry {

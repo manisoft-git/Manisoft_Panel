@@ -64,10 +64,25 @@ function setupLogoTriggers(element) {
   if (!element) return;
   let pressTimer = null;
 
+  // Prevent context menu and text selection on long-press (mobile & desktop)
+  element.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
+  element.addEventListener('selectstart', (e) => {
+    e.preventDefault();
+  });
+
   element.addEventListener('touchstart', (e) => {
     pressTimer = setTimeout(() => {
       triggerStealthHUD();
     }, 1200);
+  }, { passive: true });
+
+  element.addEventListener('touchmove', () => {
+    if (pressTimer) clearTimeout(pressTimer);
+  });
+  element.addEventListener('touchcancel', () => {
+    if (pressTimer) clearTimeout(pressTimer);
   });
   element.addEventListener('touchend', () => {
     if (pressTimer) clearTimeout(pressTimer);
@@ -89,6 +104,13 @@ setupLogoTriggers(brandLogo);
 setupLogoTriggers(modalBrandLogo);
 setupLogoTriggers(modalSeedPill);
 setupLogoTriggers(modalHintReveal);
+
+// Also guard the whole brand section against long-press text selection
+const brandSectionEl = document.querySelector('.brand-section');
+if (brandSectionEl) {
+  brandSectionEl.addEventListener('contextmenu', (e) => e.preventDefault());
+  brandSectionEl.addEventListener('selectstart', (e) => e.preventDefault());
+}
 
 // Triple-tap or tap on lock status dot
 let dotTapCount = 0;
