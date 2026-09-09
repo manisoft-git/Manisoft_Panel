@@ -25,32 +25,53 @@ export async function renderFleetMatrix(containerEl) {
       }) || null;
     });
 
+    const panelUrl = "https://manisoft-mission-control.onrender.com";
+
     let html = `
+      <!-- Master Panel 24/7 Cloud Host Banner -->
+      <div class="cloud-banner-box" style="background:linear-gradient(90deg, rgba(16,185,129,0.12), rgba(14,165,233,0.12)); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="dot-pulse green"></span>
+            <strong style="color:#10b981; font-size:0.95rem; letter-spacing:0.5px;">MASTER PANEL 24/7 CLOUD RUNNER ACTIVE</strong>
+            <span style="background:rgba(16,185,129,0.2); color:#10b981; font-size:0.7rem; padding:2px 6px; border-radius:4px; font-weight:700;">ALWAYS-ON</span>
+          </div>
+          <div style="margin-top:4px; font-size:0.85rem; color:#94a3b8;">
+            Direct 24/7 Address: <a href="${panelUrl}" target="_blank" rel="noopener" style="color:#38bdf8; font-weight:700; font-family:monospace; text-decoration:underline;">${panelUrl}</a>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn-icon copy-url" data-url="${panelUrl}" title="Copy Link" style="background:#1e293b; border:1px solid #334155; color:#fff; padding:6px 12px; border-radius:6px; font-size:0.8rem; cursor:pointer; font-weight:600;">📋 Copy Panel Link</button>
+          <a href="${panelUrl}" target="_blank" rel="noopener" style="background:#10b981; color:#000; font-weight:800; padding:6px 14px; border-radius:6px; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">OPEN 24/7 PANEL ↗</a>
+        </div>
+      </div>
+
       <div class="deck-header-row">
         <div>
-          <h3>LIVE FLEET ADDRESS MATRIX & 24/7 CLOUD HYPERVISOR</h3>
-          <p style="font-size:0.75rem; color:#8892b0; margin:4px 0 0 0;">
-            Manage local instances & 1-tap publish/unpublish directly to Render 24/7 Cloud Servers.
+          <h3 style="margin:0; font-size:1.1rem; color:#f8fafc;">LIVE FLEET ADDRESS MATRIX & 24/7 CLOUD HYPERVISOR</h3>
+          <p style="font-size:0.78rem; color:#8892b0; margin:4px 0 0 0;">
+            1-Click deploy any project to 24/7 worldwide HTTPS cloud hosting. Scale to zero anytime.
           </p>
         </div>
-        <div class="deck-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="btn-cloud-publish-all" class="btn-primary-sm" style="background:#10b981; color:#000;">☁️ DEPLOY ALL 24/7</button>
-          <button id="btn-publish-all" class="btn-primary-sm">⚡ START ALL LOCAL</button>
+        <div class="deck-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+          <button id="btn-cloud-publish-all" class="btn-primary-sm" style="background:#10b981; color:#000; font-weight:700;">☁️ DEPLOY ALL 24/7</button>
+          <button id="btn-publish-all" class="btn-primary-sm">⚡ START LOCAL</button>
           <button id="btn-sync-all" class="btn-secondary-sm">🐙 SYNC GITHUB</button>
           <button id="btn-fleet-refresh" class="btn-ghost-sm">↻ REFRESH</button>
         </div>
       </div>
-      <div class="fleet-table-wrapper" style="overflow-x:auto;">
-        <table class="noc-table">
+
+      <div class="fleet-table-wrapper" style="overflow-x:auto; margin-top:12px;">
+        <table class="noc-table" style="width:100%; border-collapse:collapse;">
           <thead>
             <tr>
-              <th>PROJECT</th>
-              <th>STACK</th>
-              <th>LOCAL STATUS</th>
-              <th>24/7 CLOUD ADDRESS (RENDER)</th>
-              <th>CLOUD STATE</th>
-              <th>1-TAP CLOUD CONTROLS</th>
-              <th>LOCAL CONTROLS</th>
+              <th style="min-width:130px;">PROJECT</th>
+              <th style="min-width:110px;">STACK</th>
+              <th style="min-width:100px;">LOCAL HOST</th>
+              <th style="min-width:280px;">24/7 CLOUD ADDRESS (RENDER)</th>
+              <th style="min-width:110px;">CLOUD STATE</th>
+              <th style="min-width:200px;">1-TAP CLOUD CONTROLS</th>
+              <th style="min-width:120px;">LOCAL</th>
             </tr>
           </thead>
           <tbody>
@@ -61,7 +82,7 @@ export async function renderFleetMatrix(containerEl) {
       const localStatusBadge = isRunning 
         ? `<span class="pill pill-green"><span class="dot-pulse green"></span> ONLINE (${p.latencyMs || 4}ms)</span>`
         : (p.liveStatus === 'decommissioned' 
-            ? `<span class="pill pill-red"><span class="dot-pulse red"></span> DECOMMISSIONED</span>`
+            ? `<span class="pill pill-red"><span class="dot-pulse red"></span> OFF</span>`
             : `<span class="pill pill-amber"><span class="dot-pulse amber"></span> STOPPED</span>`);
 
       const localUrl = p.publicUrl || `http://127.0.0.1:${p.port}`;
@@ -70,34 +91,45 @@ export async function renderFleetMatrix(containerEl) {
       const cloudUrl = hasCloud ? (p.cloudService.url || '') : '';
 
       const cloudStateBadge = !hasCloud
-        ? `<span class="pill pill-ghost" style="opacity:0.6;">OFFLINE (0 COST)</span>`
+        ? `<span class="pill pill-ghost" style="opacity:0.6;">NOT DEPLOYED</span>`
         : (isSuspended
-            ? `<span class="pill pill-amber">SUSPENDED (0 COST)</span>`
+            ? `<span class="pill pill-amber">SUSPENDED</span>`
             : `<span class="pill pill-green" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;"><span class="dot-pulse green"></span> 24/7 LIVE</span>`);
 
       const cloudUrlDisplay = (hasCloud && cloudUrl && !isSuspended)
-        ? `<div class="url-cell"><a href="${cloudUrl}" target="_blank" class="live-link" rel="noopener" style="color:#38bdf8;">${cloudUrl}</a> <button class="btn-icon copy-url" title="Copy URL" data-url="${cloudUrl}">📋</button></div>`
-        : `<span style="color:#64748b; font-size:0.8rem;">—</span>`;
+        ? `
+          <div class="cloud-url-box" style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:rgba(14,165,233,0.12); border:1px solid rgba(14,165,233,0.4); padding:6px 10px; border-radius:6px;">
+            <a href="${cloudUrl}" target="_blank" class="live-cloud-link" rel="noopener" style="color:#38bdf8; font-family:monospace; font-weight:700; font-size:0.85rem; text-decoration:none; word-break:break-all;">
+              🔗 ${cloudUrl}
+            </a>
+            <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
+              <button class="btn-icon copy-url" title="Copy Website Link" data-url="${cloudUrl}" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; padding:3px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">📋 Copy</button>
+              <a href="${cloudUrl}" target="_blank" rel="noopener" style="background:#0284c7; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; text-decoration:none; display:inline-flex; align-items:center; gap:2px;">VISIT ↗</a>
+            </div>
+          </div>
+        `
+        : (hasCloud && isSuspended 
+            ? `<span style="color:#94a3b8; font-size:0.8rem; font-family:monospace;">${cloudUrl} (Suspended)</span>`
+            : `<span style="color:#64748b; font-size:0.8rem; font-style:italic;">No cloud endpoint active</span>`);
 
       let cloudActionBtns = '';
       if (!hasCloud) {
-        cloudActionBtns = `<button class="btn-action cloud-deploy" data-name="${p.name}" style="background:#10b981; color:#000; font-weight:700;">🚀 DEPLOY 24/7</button>`;
+        cloudActionBtns = `<button class="btn-action cloud-deploy" data-name="${p.name}" style="background:#10b981; color:#000; font-weight:800; padding:6px 12px; border-radius:4px; border:none; cursor:pointer;">🚀 DEPLOY 24/7</button>`;
       } else if (isSuspended) {
         cloudActionBtns = `
-          <button class="btn-action cloud-resume" data-name="${p.name}" data-id="${p.cloudService.id}" style="background:#3b82f6; color:#fff;">RESUME</button>
-          <button class="btn-action cloud-redeploy" data-name="${p.name}" data-id="${p.cloudService.id}">REDEPLOY</button>
+          <button class="btn-action cloud-resume" data-name="${p.name}" data-id="${p.cloudService.id}" style="background:#3b82f6; color:#fff; font-weight:700; padding:4px 10px; border-radius:4px; border:none; cursor:pointer;">RESUME</button>
+          <button class="btn-action cloud-redeploy" data-name="${p.name}" data-id="${p.cloudService.id}" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; padding:4px 8px; border-radius:4px; cursor:pointer;">REBUILD</button>
         `;
       } else {
         cloudActionBtns = `
-          <a href="${cloudUrl}" target="_blank" class="btn-action open" rel="noopener" style="background:#0ea5e9; color:#fff;">VISIT</a>
-          <button class="btn-action cloud-unpublish danger" data-name="${p.name}" data-id="${p.cloudService.id}" style="border-color:#f43f5e; color:#f43f5e;">UNPUBLISH</button>
-          <button class="btn-action cloud-redeploy" data-name="${p.name}" data-id="${p.cloudService.id}">REBUILD</button>
+          <button class="btn-action cloud-unpublish danger" data-name="${p.name}" data-id="${p.cloudService.id}" style="background:rgba(244,63,94,0.12); border:1px solid #f43f5e; color:#f43f5e; font-weight:600; padding:4px 8px; border-radius:4px; cursor:pointer;">UNPUBLISH</button>
+          <button class="btn-action cloud-redeploy" data-name="${p.name}" data-id="${p.cloudService.id}" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; padding:4px 8px; border-radius:4px; cursor:pointer;">REBUILD</button>
         `;
       }
 
       html += `
         <tr data-project="${p.name}">
-          <td class="proj-title"><strong>${p.name.toUpperCase()}</strong></td>
+          <td class="proj-title"><strong style="color:#f1f5f9; font-size:0.9rem;">${p.name.toUpperCase()}</strong></td>
           <td><span class="badge badge-tech">${p.framework || 'Python / Web'}</span></td>
           <td>${localStatusBadge}</td>
           <td>${cloudUrlDisplay}</td>
@@ -106,7 +138,7 @@ export async function renderFleetMatrix(containerEl) {
           <td>
             <div class="action-buttons" style="display:flex; gap:6px;">
               <a href="${localUrl}" target="_blank" class="btn-action open" rel="noopener">LOCAL</a>
-              <button class="btn-action restart" data-name="${p.name}">RELOAD</button>
+              <button class="btn-action restart" data-name="${p.name}">↻</button>
             </div>
           </td>
         </tr>
@@ -137,7 +169,8 @@ export async function renderFleetMatrix(containerEl) {
           const result = await res.json();
           if (result.success) {
             sound.success();
-            alert(`[✓] Project ${name} is deploying to Render 24/7 Cloud!\nLive Address: ${result.result.url || 'Building...'}`);
+            const liveUrl = result.result.url || `https://manisoft-${name.toLowerCase().replace(/_/g, '-')}.onrender.com`;
+            prompt(`[✓] Project ${name} is deploying to Render 24/7 Cloud!\n\nAccess Link (Copy below):`, liveUrl);
           } else {
             sound.error();
             alert('[-] Deployment error: ' + (result.error || 'Failed'));
@@ -156,7 +189,7 @@ export async function renderFleetMatrix(containerEl) {
         sound.error();
         const name = b.dataset.name;
         const id = b.dataset.id;
-        if (!confirm(`Unpublish ${name} from 24/7 cloud? (Service will be suspended and scale to zero).`)) return;
+        if (!confirm(`Unpublish ${name} from 24/7 cloud? The service will be suspended and scale to zero (no resources used).`)) return;
         b.textContent = 'UNPUBLISHING...';
         b.disabled = true;
         try {
@@ -228,7 +261,7 @@ export async function renderFleetMatrix(containerEl) {
           const result = await res.json();
           if (result.success) {
             sound.success();
-            alert(`[✓] Build triggered on Render for ${name}.`);
+            alert(`[✓] Cloud build triggered on Render for ${name}.`);
           } else {
             sound.error();
             alert('[-] Error: ' + (result.error || 'Failed'));
@@ -261,9 +294,11 @@ export async function renderFleetMatrix(containerEl) {
     containerEl.querySelectorAll('.copy-url').forEach(btn => {
       btn.addEventListener('click', () => {
         sound.tap();
-        navigator.clipboard.writeText(btn.dataset.url);
-        btn.textContent = '✓';
-        setTimeout(() => btn.textContent = '📋', 1500);
+        const url = btn.dataset.url;
+        navigator.clipboard.writeText(url);
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => btn.textContent = orig, 1800);
       });
     });
 
@@ -285,12 +320,12 @@ export async function renderFleetMatrix(containerEl) {
           } catch (e) {}
         }
         sound.success();
-        alert('All projects submitted to Render Cloud. Check the table for build statuses.');
+        alert('All projects submitted to Render Cloud. Refreshing matrix...');
         renderFleetMatrix(containerEl);
       });
     }
 
-    // Existing buttons
+    // Existing local buttons
     const publishAllBtn = containerEl.querySelector('#btn-publish-all');
     if (publishAllBtn) {
       publishAllBtn.addEventListener('click', async () => {
