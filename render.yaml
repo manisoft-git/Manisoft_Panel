@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: manisoft-panel
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install --omit=dev --ignore-scripts
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPERATOR_EMAIL
+        value: manifestsubeno@gmail.com

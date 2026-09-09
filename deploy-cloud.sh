@@ -3,29 +3,49 @@
 # Autonomous 1-Click Cloud Publisher for 24/7 Disconnected Swarm Execution
 # ==============================================================================
 set -euo pipefail
-echo "=== [MANI\$OFT] PACKAGING FOR 24/7 CLOUD RUNNER EXECUTION ==="
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-TARGET="${1:-container}"
+echo "======================================================================"
+echo " [MANI\$OFT] 24/7 INDEPENDENT CLOUD RUNNER DEPLOYMENT"
+echo "======================================================================"
+echo " Repository: https://github.com/manisoft-git/Manisoft_Panel"
+echo " Target:     Always-On Cloud Execution (Immune to phone shutdown)"
+echo "======================================================================"
+
+TARGET="${1:-render}"
 
 case "$TARGET" in
-    container|docker)
-        echo "[*] Building low-memory Alpine/Node production container..."
-        if command -v docker >/dev/null 2>&1; then
-            docker build -t manisoft-singularity:v100.0 .
-            echo "[✓] Container built. Launching background worker with cgroup MemoryMax=650M..."
-            docker run -d --name manisoft-core -p 3000:3000 --memory="650m" \
-                -v "$(pwd)/.manisoft_snapshots:/app/.manisoft_snapshots" \
-                manisoft-singularity:v100.0
-            echo "[✓] 24/7 Disconnected Swarm Runner is online."
+    render)
+        echo "[*] Render Blueprint configured (render.yaml)."
+        echo "    🔗 1-Click Deploy Link: https://dashboard.render.com/select-repo?type=web"
+        echo "    Connect your repository: manisoft-git/Manisoft_Panel"
+        echo "[✓] Render will automatically deploy and assign a 24/7 permanent HTTPS URL."
+        ;;
+    railway)
+        echo "[*] Railway configured (railway.json)."
+        echo "    🔗 1-Click Deploy Link: https://railway.app/new"
+        echo "    Select: Deploy from GitHub repo -> manisoft-git/Manisoft_Panel"
+        ;;
+    fly)
+        echo "[*] Fly.io configured (fly.toml)."
+        if command -v flyctl >/dev/null 2>&1; then
+            flyctl deploy
         else
-            echo "[i] Docker engine not running locally. Generating cloud-init / container bundle."
+            echo "    Install Fly CLI or deploy via GitHub Actions."
         fi
         ;;
-    fly|render|railway)
-        echo "[*] Deploying to $TARGET edge network..."
-        echo "[✓] Configuration manifest validated."
+    docker|container)
+        echo "[*] Building local Docker production container..."
+        if command -v docker >/dev/null 2>&1; then
+            docker build -t manisoft-singularity:v100.0 .
+            docker run -d --restart=always --name manisoft-core -p 3000:3000 manisoft-singularity:v100.0
+            echo "[✓] Container online and set to restart=always."
+        else
+            echo "[!] Docker engine not available locally."
+        fi
         ;;
     *)
-        echo "Target: $TARGET - Defaulting to background daemon."
+        echo "Usage: ./deploy-cloud.sh [render|railway|fly|docker]"
         ;;
 esac
