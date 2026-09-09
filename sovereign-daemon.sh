@@ -227,14 +227,26 @@ print_online_url() {
     echo " Clearance Level: LEVEL 1 (Sovereign Persistent)"
     echo " Status: 24/7 BACKGROUND PERSISTENCE ENGAGED"
     if [ -n "$url" ]; then
+        local short_url=""
+        short_url=$(curl -s --max-time 3 "https://clck.ru/--?url=$url" 2>/dev/null || true)
+        if [[ ! "$short_url" =~ ^https?:// ]]; then
+            short_url=""
+        fi
+
         echo " Worldwide HTTPS URL: $url"
+        if [ -n "$short_url" ]; then
+            echo " Compact Short URL:  $short_url"
+        fi
         echo ""
         python3 -c "
 url = '$url'
-print('\033[1;36m' + '─'*60 + '\033[0m')
-print('\033[1;32m  ACCESS LINK:  \033[4;37m' + url + '\033[0m')
-print('\033[1;36m' + '─'*60 + '\033[0m')
-print('  Mobile Scan QR: https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + url)
+short_url = '$short_url'
+print('\033[1;36m' + '─'*64 + '\033[0m')
+if short_url:
+    print('\033[1;32m  COMPACT SHORT LINK:  \033[1;37;44m ' + short_url + ' \033[0m')
+print('\033[1;32m  DIRECT HTTPS LINK:   \033[4;37m' + url + '\033[0m')
+print('\033[1;36m' + '─'*64 + '\033[0m')
+print('  Mobile Scan QR: https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + (short_url or url))
 " 2>/dev/null || true
     else
         echo " Local LAN URL: http://localhost:$PORT"
