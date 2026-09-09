@@ -29,9 +29,12 @@ const loginModal = document.getElementById('login-modal');
 const loginForm = document.getElementById('login-form');
 const brandLogo = document.getElementById('brand-logo');
 const modalBrandLogo = document.getElementById('modal-brand-logo');
-const modalSeedPill = document.getElementById('modal-seed-pill');
+const modalSeedBadge = document.getElementById('modal-seed-badge');
+const modalInlineSeed = document.getElementById('modal-inline-seed');
 const modalLockDot = document.getElementById('modal-lock-dot');
-const modalHintReveal = document.getElementById('modal-hint-reveal');
+const hudSeed = document.getElementById('hud-seed');
+const btnAgyComm = document.getElementById('btn-agy-comm');
+const agyModal = document.getElementById('antigravity-modal');
 const stealthToast = document.getElementById('stealth-toast');
 const panicHeaderBtn = document.getElementById('btn-panic-header');
 
@@ -43,6 +46,10 @@ let currentNonceCode = 'ACTIVE';
 // 1. HARDENED SECURITY & ROLLING NONCE DETECTION
 // ------------------------------------------------------------------------------
 function extractNonceFromDOM() {
+  if (typeof window !== 'undefined' && window.__MANISOFT_SEED__) {
+    currentNonceCode = window.__MANISOFT_SEED__;
+    return;
+  }
   const comments = [];
   const iterator = document.createNodeIterator(document, NodeFilter.SHOW_COMMENT, null, false);
   let curNode;
@@ -57,7 +64,17 @@ function extractNonceFromDOM() {
     }
   }
 }
-extractNonceFromDOM();
+
+function updateSeedDisplay() {
+  extractNonceFromDOM();
+  const hudSeedEl = document.getElementById('hud-seed');
+  if (hudSeedEl) hudSeedEl.textContent = currentNonceCode;
+  const modalSeedBadgeEl = document.getElementById('modal-seed-badge');
+  if (modalSeedBadgeEl) modalSeedBadgeEl.textContent = currentNonceCode;
+  const modalInlineSeedEl = document.getElementById('modal-inline-seed');
+  if (modalInlineSeedEl) modalInlineSeedEl.textContent = currentNonceCode;
+}
+updateSeedDisplay();
 
 // Mobile Stealth HUD Trigger: 2s Long-Press or Direct Tap
 function setupLogoTriggers(element) {
@@ -102,8 +119,7 @@ function setupLogoTriggers(element) {
 
 setupLogoTriggers(brandLogo);
 setupLogoTriggers(modalBrandLogo);
-setupLogoTriggers(modalSeedPill);
-setupLogoTriggers(modalHintReveal);
+setupLogoTriggers(modalSeedBadge);
 
 // Also guard the whole brand section against long-press text selection
 const brandSectionEl = document.querySelector('.brand-section');
@@ -112,7 +128,7 @@ if (brandSectionEl) {
   brandSectionEl.addEventListener('selectstart', (e) => e.preventDefault());
 }
 
-// Triple-tap or tap on lock status dot
+// Tap on lock status dot to refresh/inspect seed
 let dotTapCount = 0;
 let dotTapTimer = null;
 if (modalLockDot) {
@@ -132,7 +148,7 @@ if (modalLockDot) {
 }
 
 function triggerStealthHUD() {
-  extractNonceFromDOM();
+  updateSeedDisplay();
   sound.tap();
   if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
   stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s]`;
@@ -314,43 +330,116 @@ let voiceReplyEnabled = true;
 let isRecordingVoice = false;
 let speechRecognizer = null;
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => {
+    switch (m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return m;
+    }
+  });
+}
+
 function speakAntigravityResponse(text) {
   if (!voiceReplyEnabled || !('speechSynthesis' in window)) return;
   try {
     window.speechSynthesis.cancel();
-    const spokenText = text.replace(/```[\s\S]*?```/g, 'Code block omitted.').slice(0, 600);
+    const spokenText = String(text)
+      .replace(/```[\s\S]*?```/g, 'Code snippet omitted.')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/[*#_~]/g, '')
+      .slice(0, 600);
     const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.rate = 1.05;
     window.speechSynthesis.speak(utterance);
   } catch (e) {}
 }
 
-function startVoiceRecognition() {
-  const micBtn = document.querySelector('.touch-key[data-key="MIC"]');
-  if (activeDeck !== 'terminal') {
-    switchDeck('terminal');
-  }
-
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    const fallback = prompt('Speak or enter prompt for Antigravity:');
-    if (fallback && fallback.trim()) {
-      const termInput = document.querySelector('#term-input');
-      if (termInput) {
-        termInput.value = fallback.trim();
-        const termSend = document.querySelector('#btn-term-send');
-        if (termSend) termSend.click();
+function openAntigravityModal(initialPrompt = '') {
+  if (agyModal) {
+    agyModal.classList.remove('hidden');
+    sound.tap();
+    const commInput = document.getElementById('comm-input');
+    if (commInput) {
+      if (initialPrompt) {
+        commInput.value = initialPrompt;
       }
+      commInput.focus();
     }
+  }
+}
+
+function closeAntigravityModal() {
+  if (agyModal) {
+    agyModal.classList.add('hidden');
+    sound.tap();
+    stopVoiceRecognition();
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  }
+}
+
+function stopVoiceRecognition() {
+  if (speechRecognizer) {
+    try { speechRecognizer.stop(); } catch (e) {}
+  }
+  isRecordingVoice = false;
+  updateMicUI(false);
+}
+
+function updateMicUI(recording) {
+  const commMicBtn = document.getElementById('btn-comm-mic');
+  const commMicText = document.getElementById('comm-mic-text');
+  const commMicIcon = document.getElementById('comm-mic-icon');
+  const touchMicBtn = document.querySelector('.touch-key[data-key="MIC"]');
+  const statusText = document.getElementById('comm-status-text');
+  const statusDot = document.getElementById('comm-status-dot');
+
+  if (recording) {
+    if (commMicBtn) {
+      commMicBtn.classList.add('recording');
+      if (commMicText) commMicText.textContent = 'LISTENING...';
+      if (commMicIcon) commMicIcon.textContent = '🔴';
+    }
+    if (touchMicBtn) {
+      touchMicBtn.classList.add('recording');
+      touchMicBtn.textContent = '🎙️ REC';
+    }
+    if (statusText) statusText.textContent = 'Listening... Speak your instruction clearly.';
+    if (statusDot) { statusDot.className = 'dot-pulse red'; }
+  } else {
+    if (commMicBtn) {
+      commMicBtn.classList.remove('recording');
+      if (commMicText) commMicText.textContent = 'SPEAK';
+      if (commMicIcon) commMicIcon.textContent = '🎙️';
+    }
+    if (touchMicBtn) {
+      touchMicBtn.classList.remove('recording');
+      touchMicBtn.textContent = 'MIC';
+    }
+    if (statusText) statusText.textContent = 'Ready. Speak via MIC or type your message.';
+    if (statusDot) { statusDot.className = 'dot-pulse green'; }
+  }
+}
+
+function toggleVoiceRecognition(targetInputId = 'comm-input') {
+  if (isRecordingVoice) {
+    stopVoiceRecognition();
     return;
   }
 
-  if (isRecordingVoice && speechRecognizer) {
-    try { speechRecognizer.stop(); } catch (e) {}
-    isRecordingVoice = false;
-    if (micBtn) {
-      micBtn.classList.remove('recording');
-      micBtn.textContent = 'MIC';
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const targetInput = document.getElementById(targetInputId);
+
+  if (!SpeechRecognition) {
+    const statusText = document.getElementById('comm-status-text');
+    if (statusText) {
+      statusText.textContent = 'Speech API restricted by browser: Tap mobile keyboard 🎙️ mic to dictate!';
+    }
+    if (targetInput) {
+      targetInput.focus();
     }
     return;
   }
@@ -362,49 +451,91 @@ function startVoiceRecognition() {
     speechRecognizer.continuous = false;
 
     isRecordingVoice = true;
-    if (micBtn) {
-      micBtn.classList.add('recording');
-      micBtn.textContent = '🎙️ REC';
-    }
+    updateMicUI(true);
 
     speechRecognizer.onresult = (event) => {
       let transcript = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         transcript += event.results[i][0].transcript;
       }
-      const termInput = document.querySelector('#term-input');
-      if (termInput) termInput.value = transcript;
+      if (targetInput) targetInput.value = transcript;
+      const statusText = document.getElementById('comm-status-text');
+      if (statusText) statusText.textContent = `Heard: "${transcript}"...`;
     };
 
     speechRecognizer.onerror = (event) => {
-      isRecordingVoice = false;
-      if (micBtn) {
-        micBtn.classList.remove('recording');
-        micBtn.textContent = 'MIC';
-      }
+      stopVoiceRecognition();
+      const statusText = document.getElementById('comm-status-text');
+      if (statusText) statusText.textContent = `Voice capture ended (${event.error || 'silence'}). Dictate via mobile keyboard mic or type.`;
     };
 
     speechRecognizer.onend = () => {
-      isRecordingVoice = false;
-      if (micBtn) {
-        micBtn.classList.remove('recording');
-        micBtn.textContent = 'MIC';
-      }
-      const termInput = document.querySelector('#term-input');
-      if (termInput && termInput.value.trim()) {
-        const termSend = document.querySelector('#btn-term-send');
-        if (termSend) termSend.click();
+      stopVoiceRecognition();
+      if (targetInput && targetInput.value.trim()) {
+        if (targetInputId === 'comm-input') {
+          sendAntigravityDialogue(targetInput.value.trim());
+        } else if (targetInputId === 'term-input') {
+          const termSend = document.querySelector('#btn-term-send');
+          if (termSend) termSend.click();
+        }
       }
     };
 
     speechRecognizer.start();
   } catch (err) {
-    isRecordingVoice = false;
-    if (micBtn) {
-      micBtn.classList.remove('recording');
-      micBtn.textContent = 'MIC';
-    }
+    stopVoiceRecognition();
+    if (targetInput) targetInput.focus();
   }
+}
+
+async function sendAntigravityDialogue(promptText) {
+  const stream = document.getElementById('comm-dialogue-stream');
+  const commInput = document.getElementById('comm-input');
+  if (!stream || !promptText) return;
+
+  if (commInput) commInput.value = '';
+
+  // Append user message bubble
+  const userBubble = document.createElement('div');
+  userBubble.className = 'comm-bubble comm-user';
+  userBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-cyan);">👤 You:</div><div>${escapeHtml(promptText)}</div>`;
+  stream.appendChild(userBubble);
+
+  // Append AI thinking bubble
+  const aiBubble = document.createElement('div');
+  aiBubble.className = 'comm-bubble comm-ai';
+  aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 Antigravity AI:</div><div class="thinking-text" style="color: var(--text-dim); font-style: italic;">Reasoning & executing prompt...</div>`;
+  stream.appendChild(aiBubble);
+  stream.scrollTop = stream.scrollHeight;
+
+  const statusText = document.getElementById('comm-status-text');
+  if (statusText) statusText.textContent = 'Antigravity is reasoning...';
+
+  try {
+    const res = await fetch('/api/antigravity/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: promptText, continue: true })
+    });
+    const data = await res.json();
+    const reply = data.output || data.reply || data.error || 'No response produced.';
+
+    const formattedReply = escapeHtml(reply).replace(/\n/g, '<br>');
+    aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 Antigravity AI:</div><div>${formattedReply}</div>`;
+
+    if (data.success !== false) {
+      sound.success();
+      speakAntigravityResponse(reply);
+    } else {
+      sound.error();
+    }
+  } catch (err) {
+    aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-red);">🤖 Antigravity Error:</div><div>Failed to dispatch: ${escapeHtml(err.message)}</div>`;
+    sound.error();
+  }
+
+  if (statusText) statusText.textContent = 'Ready. Speak via MIC or type message.';
+  stream.scrollTop = stream.scrollHeight;
 }
 
 // Interactive Terminal NOC & Antigravity AI Bridge Deck
@@ -571,7 +702,8 @@ document.querySelectorAll('.touch-key').forEach(key => {
     sound.tap();
     const val = key.dataset.key;
     if (val === 'MIC') {
-      startVoiceRecognition();
+      openAntigravityModal();
+      toggleVoiceRecognition('comm-input');
       return;
     }
     const termInput = document.querySelector('#term-input');
@@ -580,6 +712,58 @@ document.querySelectorAll('.touch-key').forEach(key => {
       else termInput.value += val;
       termInput.focus();
     }
+  });
+});
+
+// Antigravity AI Comm Modal Event Listeners
+if (btnAgyComm) {
+  btnAgyComm.addEventListener('click', () => {
+    openAntigravityModal();
+  });
+}
+
+const btnCommClose = document.getElementById('btn-comm-close');
+if (btnCommClose) {
+  btnCommClose.addEventListener('click', closeAntigravityModal);
+}
+
+const btnCommVoiceToggle = document.getElementById('btn-comm-voice-toggle');
+if (btnCommVoiceToggle) {
+  btnCommVoiceToggle.addEventListener('click', () => {
+    sound.tap();
+    voiceReplyEnabled = !voiceReplyEnabled;
+    btnCommVoiceToggle.textContent = voiceReplyEnabled ? '🔊 VOICE: ON' : '🔈 VOICE: OFF';
+  });
+}
+
+const btnCommMic = document.getElementById('btn-comm-mic');
+if (btnCommMic) {
+  btnCommMic.addEventListener('click', () => {
+    toggleVoiceRecognition('comm-input');
+  });
+}
+
+const commInputEl = document.getElementById('comm-input');
+const btnCommSend = document.getElementById('btn-comm-send');
+if (btnCommSend && commInputEl) {
+  btnCommSend.addEventListener('click', () => {
+    const val = commInputEl.value.trim();
+    if (val) sendAntigravityDialogue(val);
+  });
+  commInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = commInputEl.value.trim();
+      if (val) sendAntigravityDialogue(val);
+    }
+  });
+}
+
+document.querySelectorAll('.comm-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    sound.tap();
+    const prompt = chip.dataset.prompt;
+    if (prompt) sendAntigravityDialogue(prompt);
   });
 });
 
@@ -651,6 +835,7 @@ if (sideFlushBtn) {
 }
 
 // Boot init
+updateSeedDisplay();
 checkClearance();
 renderActiveDeck();
 pollTelemetry();

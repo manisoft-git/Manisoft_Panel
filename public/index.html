@@ -22,9 +22,15 @@
 
     <div class="header-telemetry">
       <canvas id="oscilloscope" width="140" height="28" title="Audio-Reactive Oscilloscope"></canvas>
+      <div class="hud-stat" id="head-seed-box" title="Active Security Rolling Seed">SEED: <strong id="hud-seed" style="color: var(--color-neon); font-size: 13px; letter-spacing: 2px;">----</strong></div>
       <div class="hud-stat">CPU: <strong id="hud-cpu">0.12</strong></div>
       <div class="hud-stat">RAM: <strong id="hud-ram">--</strong> MB</div>
       <div class="hud-stat">PSI: <strong id="hud-psi">0.0%</strong></div>
+      <button id="btn-agy-comm" class="btn-primary-sm" style="display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 10px; font-weight: bold; background: rgba(0, 255, 102, 0.15); border: 1px solid var(--color-neon); color: var(--color-neon);" title="Speak to Antigravity AI">
+        <span class="dot-pulse green"></span>
+        <span>🤖 <strong>ANTIGRAVITY</strong></span>
+        <span style="font-size: 9px; background: rgba(0, 255, 102, 0.25); padding: 1px 4px; border-radius: 3px;">COMM</span>
+      </button>
       <button id="btn-panic-header" class="btn-danger-sm" title="Instant Stealth Quarantine">🚨 PANIC</button>
     </div>
   </header>
@@ -102,17 +108,18 @@
     <div class="modal-box">
       <!-- Modal Logo & Diagnostic Row -->
       <div class="modal-header-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-dim);">
-        <div id="modal-brand-logo" class="brand-logo" style="font-size: 15px; cursor: pointer;">MANI$OFT // NOC</div>
+        <div id="modal-brand-logo" class="brand-logo" style="font-size: 15px;">MANI$OFT // NOC</div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span id="modal-seed-pill" class="pill pill-cyan" style="font-size: 10px; cursor: pointer;" title="Security Seed Diagnostic">DIAG HUD</span>
-          <span id="modal-lock-dot" class="dot-pulse green" style="cursor: pointer;" title="Triple tap or click to inspect seed"></span>
+          <span style="font-size: 11px; color: var(--text-dim);">SEED:</span>
+          <span id="modal-seed-badge" class="pill pill-cyan" style="font-family: var(--font-mono); font-size: 13px; font-weight: bold; letter-spacing: 2px; color: var(--color-neon); border: 1px solid var(--color-neon); padding: 2px 8px; background: rgba(0, 255, 102, 0.12);">----</span>
+          <span id="modal-lock-dot" class="dot-pulse green"></span>
         </div>
       </div>
       <h2 style="color: var(--color-neon); margin-bottom: 6px; font-size: 14px;">SOVEREIGN ACCESS CLEARANCE</h2>
-      <p style="color: var(--text-dim); font-size: 11px; margin-bottom: 14px;">
+      <p style="color: var(--text-dim); font-size: 11px; margin-bottom: 14px; line-height: 1.5;">
         Clearance Level 1 Operator: <code>manifestsubeno@gmail.com</code><br>
-        Enter Master Secret combined with dynamic 4-character rolling cycle seed.<br>
-        <span style="color: var(--color-cyan); font-size: 11px; cursor: pointer; display: inline-block; margin-top: 4px;" id="modal-hint-reveal">💡 <strong>Tap logo, lock dot, or DIAG HUD to reveal cycle seed</strong></span>
+        Enter Master Secret (<code>$$manisoft11console</code>) followed by the active cycle seed.<br>
+        Current Rolling Cycle Seed: <strong id="modal-inline-seed" style="color: var(--color-neon); letter-spacing: 2px; font-family: var(--font-mono); font-size: 13px;">----</strong>
       </p>
 
       <form id="login-form">
@@ -128,6 +135,54 @@
           <button type="submit" class="btn-primary-sm">AUTHENTICATE</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Antigravity AI Neural Voice & Chat Comm Modal -->
+  <div id="antigravity-modal" class="modal-overlay hidden" style="z-index: 1000;">
+    <div class="modal-box" style="max-width: 680px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--color-neon); box-shadow: 0 0 30px rgba(0, 255, 102, 0.25);">
+      <!-- Comm Header Row -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-dim);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="dot-pulse green"></span>
+          <strong style="color: var(--color-neon); font-size: 14px; letter-spacing: 1px;">🤖 ANTIGRAVITY AI // NEURAL COMM</strong>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="btn-comm-voice-toggle" class="btn-ghost-sm" title="Toggle audio voice response">🔊 VOICE: ON</button>
+          <button id="btn-comm-close" class="btn-secondary-sm" style="padding: 2px 8px; font-weight: bold;">✕</button>
+        </div>
+      </div>
+
+      <!-- Dialogue History Stream -->
+      <div id="comm-dialogue-stream" class="comm-stream" style="flex: 1; overflow-y: auto; max-height: 48vh; min-height: 220px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-dim); border-radius: 4px; padding: 12px; font-family: var(--font-mono); font-size: 12px; line-height: 1.5; margin-bottom: 12px;">
+        <div class="comm-bubble comm-ai">
+          <div style="color: var(--color-neon); font-weight: bold; margin-bottom: 4px;">🤖 Antigravity AI</div>
+          <div>Greetings Operator. I am connected directly to your workspace. Speak with your microphone, type instructions, ask me to manage projects, run diagnostics, or brainstorm anything. How can I assist you?</div>
+        </div>
+      </div>
+
+      <!-- Live Voice / Status Banner -->
+      <div id="comm-voice-status" style="font-size: 11px; color: var(--color-cyan); margin-bottom: 8px; min-height: 18px; display: flex; align-items: center; gap: 6px;">
+        <span id="comm-status-dot" class="dot-pulse green"></span>
+        <span id="comm-status-text">Ready. Speak via MIC or type your message.</span>
+      </div>
+
+      <!-- Quick Action Prompts -->
+      <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px;" class="comm-quick-prompts">
+        <button class="pill pill-cyan comm-chip" data-prompt="What projects are in ~/projects?">🌐 Fleet Matrix</button>
+        <button class="pill pill-cyan comm-chip" data-prompt="Publish all my fleet projects online">⚡ Publish Fleet</button>
+        <button class="pill pill-cyan comm-chip" data-prompt="Check system health, CPU, RAM, and PSI">📟 System Health</button>
+        <button class="pill pill-cyan comm-chip" data-prompt="Flush RAM memory buffers and sync git">🧹 Clean & Sync</button>
+      </div>
+
+      <!-- Input Controls Row -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="btn-comm-mic" class="btn-primary-sm" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; font-weight: bold; background: rgba(0, 255, 102, 0.2); border: 1px solid var(--color-neon);" title="Tap to Speak">
+          <span id="comm-mic-icon">🎙️</span> <span id="comm-mic-text">SPEAK</span>
+        </button>
+        <input type="text" id="comm-input" class="code-textarea" style="flex: 1; padding: 10px; border-radius: 4px; border: 1px solid var(--border-dim); background: #000; color: #fff; font-size: 13px;" placeholder="Speak or type your message to Antigravity...">
+        <button id="btn-comm-send" class="btn-primary-sm" style="padding: 10px 16px; font-weight: bold;">SEND</button>
+      </div>
     </div>
   </div>
 
