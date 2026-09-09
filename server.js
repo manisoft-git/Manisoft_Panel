@@ -16,6 +16,14 @@ const child_process = require('child_process');
 const zlib = require('zlib');
 const net = require('net');
 
+process.on("uncaughtException", (err) => {
+  console.error("[!] Uncaught Exception suppressed:", err.message);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[!] Unhandled Rejection suppressed:", reason);
+});
+
+
 // Configuration Constants
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
@@ -136,6 +144,7 @@ function recordAuditEntry(action, details = {}) {
 const redisStore = new Map();
 try {
   const redisServer = net.createServer(socket => {
+    socket.on('error', () => {});
     let buffer = '';
     socket.on('data', data => {
       buffer += data.toString();
@@ -232,6 +241,253 @@ function getSystemTelemetry() {
       tbwWritten: 12.4
     }
   };
+}
+
+
+// ------------------------------------------------------------------------------
+// RENDER CLOUD 24/7 HYPERVISOR & MULTI-PROJECT FLEET MANAGER
+// ------------------------------------------------------------------------------
+const RENDER_CONFIG_FILE = path.join(__dirname, "render.json");
+function getRenderConfig() {
+  let apiKey = process.env.RENDER_API_KEY || "";
+  let ownerId = process.env.RENDER_OWNER_ID || "";
+  if ((!apiKey || !ownerId) && fs.existsSync(RENDER_CONFIG_FILE)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(RENDER_CONFIG_FILE, "utf8"));
+      apiKey = apiKey || cfg.apiKey || "";
+      ownerId = ownerId || cfg.ownerId || "";
+    } catch (e) {}
+  }
+  return { apiKey, ownerId };
+}
+
+function renderApiRequest(method, apiPath, body = null) {
+  return new Promise((resolve, reject) => {
+    const { apiKey } = getRenderConfig();
+    if (!apiKey) return reject(new Error("Render API key not configured"));
+    const url = new URL(`https://api.render.com/v1${apiPath}`);
+    const options = {
+      method,
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname + url.search,
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      }
+    };
+    const req = https.request(options, res => {
+      let data = "";
+      res.on("data", chunk => data += chunk);
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(parsed);
+          } else {
+            reject(new Error(parsed.message || `Render API Error (${res.statusCode})`));
+          }
+        } catch (e) {
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
+          else reject(new Error(`Render API HTTP ${res.statusCode}: ${data}`));
+        }
+      });
+    });
+    req.on("error", reject);
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
+}
+
+const FLEET_RENDER_SPECS = {
+  lumina: {
+    repo: "https://github.com/manisoft-git/Lumina",
+    runtime: "python",
+    buildCommand: "pip install -r requirements.txt 2>/dev/null || true",
+    startCommand: "python3 app.py"
+  },
+  passmaster_ai: {
+    repo: "https://github.com/manisoft-git/passmaster_ai",
+    runtime: "python",
+    buildCommand: "pip install -r requirements.txt 2>/dev/null || true",
+    startCommand: "python3 app.py"
+  },
+  starshine: {
+    repo: "https://github.com/manisoft-git/starshine",
+    runtime: "python",
+    buildCommand: "pip install -r requirements.txt 2>/dev/null || true",
+    startCommand: "python3 app.py"
+  },
+  strike_ops: {
+    repo: "https://github.com/manisoft-git/strike_ops",
+    runtime: "python",
+    buildCommand: "echo Strike Ops ready",
+    startCommand: "python3 server.py"
+  },
+  subway_surfers: {
+    repo: "https://github.com/manisoft-git/subway_surfers",
+    runtime: "python",
+    buildCommand: "echo Subway Surfers ready",
+    startCommand: "python3 server.py"
+  },
+  "aether-transport": {
+    repo: "https://github.com/manisoft-git/aether-transport",
+    runtime: "docker",
+    buildCommand: "",
+    startCommand: ""
+  },
+  Manisoft_Panel: {
+    repo: "https://github.com/manisoft-git/Manisoft_Panel",
+    runtime: "node",
+    buildCommand: "npm install --omit=dev --ignore-scripts",
+    startCommand: "node server.js"
+  }
+};
+
+async function getRenderServicesWithFleet() {
+  const { ownerId } = getRenderConfig();
+  if (!ownerId) return { configured: false, services: [] };
+  const rawServices = await renderApiRequest("GET", `/services?limit=50&ownerId=${ownerId}`);
+  const services = rawServices.map(item => {
+    const s = item.service || item;
+    return {
+      id: s.id,
+      name: s.name,
+      repo: s.repo,
+      url: s.serviceDetails ? s.serviceDetails.url : "",
+      suspended: s.suspended === "suspended",
+      updatedAt: s.updatedAt,
+      dashboardUrl: s.dashboardUrl
+    };
+  });
+  return { configured: true, services };
+}
+
+async function deployProjectToRender(projName) {
+  const { ownerId } = getRenderConfig();
+  if (!ownerId) throw new Error("Render ownerId is not configured");
+  const spec = FLEET_RENDER_SPECS[projName];
+  if (!spec) throw new Error(`Unknown project specification: ${projName}`);
+
+  const serviceName = `manisoft-${projName.toLowerCase().replace(/_/g, "-")}`;
+  const existingList = await renderApiRequest("GET", `/services?limit=50&ownerId=${ownerId}`);
+  const existing = existingList.find(item => {
+    const s = item.service || item;
+    return s.name === serviceName || (s.repo && s.repo.toLowerCase() === spec.repo.toLowerCase());
+  });
+
+  if (existing) {
+    const s = existing.service || existing;
+    if (s.suspended === "suspended") {
+      await renderApiRequest("POST", `/services/${s.id}/resume`);
+    }
+    const deploy = await renderApiRequest("POST", `/services/${s.id}/deploys`);
+    return {
+      action: "resumed_and_deployed",
+      serviceId: s.id,
+      name: s.name,
+      url: s.serviceDetails ? s.serviceDetails.url : "",
+      deployId: deploy.id
+    };
+  }
+
+  // Create new service
+  const payload = {
+    type: "web_service",
+    name: serviceName,
+    ownerId,
+    repo: spec.repo,
+    branch: "main",
+    autoDeploy: "yes",
+    serviceDetails: {
+      plan: "free",
+      region: "oregon",
+      runtime: spec.runtime,
+      envSpecificDetails: {
+        buildCommand: spec.buildCommand,
+        startCommand: spec.startCommand
+      }
+    }
+  };
+
+  const created = await renderApiRequest("POST", "/services", payload);
+  const s = created.service || created;
+  return {
+    action: "created_and_deployed",
+    serviceId: s.id,
+    name: s.name,
+    url: s.serviceDetails ? s.serviceDetails.url : "",
+    deployId: created.deployId
+  };
+}
+
+async function suspendRenderService(projName, serviceId = null) {
+  let targetId = serviceId;
+  if (!targetId && projName) {
+    const { ownerId } = getRenderConfig();
+    const serviceName = `manisoft-${projName.toLowerCase().replace(/_/g, "-")}`;
+    const list = await renderApiRequest("GET", `/services?limit=50&ownerId=${ownerId}`);
+    const found = list.find(item => {
+      const s = item.service || item;
+      return s.name === serviceName;
+    });
+    if (found) targetId = (found.service || found).id;
+  }
+  if (!targetId) throw new Error(`Could not find active Render service for ${projName}`);
+  await renderApiRequest("POST", `/services/${targetId}/suspend`);
+  return { success: true, serviceId: targetId, status: "suspended" };
+}
+
+async function resumeRenderService(projName, serviceId = null) {
+  let targetId = serviceId;
+  if (!targetId && projName) {
+    const { ownerId } = getRenderConfig();
+    const serviceName = `manisoft-${projName.toLowerCase().replace(/_/g, "-")}`;
+    const list = await renderApiRequest("GET", `/services?limit=50&ownerId=${ownerId}`);
+    const found = list.find(item => {
+      const s = item.service || item;
+      return s.name === serviceName;
+    });
+    if (found) targetId = (found.service || found).id;
+  }
+  if (!targetId) throw new Error(`Could not find active Render service for ${projName}`);
+  await renderApiRequest("POST", `/services/${targetId}/resume`);
+  return { success: true, serviceId: targetId, status: "active" };
+}
+
+async function redeployRenderService(projName, serviceId = null) {
+  let targetId = serviceId;
+  if (!targetId && projName) {
+    const { ownerId } = getRenderConfig();
+    const serviceName = `manisoft-${projName.toLowerCase().replace(/_/g, "-")}`;
+    const list = await renderApiRequest("GET", `/services?limit=50&ownerId=${ownerId}`);
+    const found = list.find(item => {
+      const s = item.service || item;
+      return s.name === serviceName;
+    });
+    if (found) targetId = (found.service || found).id;
+  }
+  if (!targetId) throw new Error(`Could not find active Render service for ${projName}`);
+  const deploy = await renderApiRequest("POST", `/services/${targetId}/deploys`);
+  return { success: true, serviceId: targetId, deployId: deploy.id };
+}
+
+async function deleteRenderService(projName, serviceId = null) {
+  let targetId = serviceId;
+  if (!targetId && projName) {
+    const { ownerId } = getRenderConfig();
+    const serviceName = `manisoft-${projName.toLowerCase().replace(/_/g, "-")}`;
+    const list = await renderApiRequest("GET", `/services?limit=50&ownerId=${ownerId}`);
+    const found = list.find(item => {
+      const s = item.service || item;
+      return s.name === serviceName;
+    });
+    if (found) targetId = (found.service || found).id;
+  }
+  if (!targetId) throw new Error(`Could not find active Render service for ${projName}`);
+  await renderApiRequest("DELETE", `/services/${targetId}`);
+  return { success: true, serviceId: targetId, deleted: true };
 }
 
 // ------------------------------------------------------------------------------
@@ -675,6 +931,81 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  
+  // REST API: Render Cloud Fleet Integration
+  if (pathname === "/api/render/services") {
+    try {
+      const result = await getRenderServicesWithFleet();
+      return sendJSON(res, result);
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  if (pathname === "/api/render/publish" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const projName = body.project;
+      const result = await deployProjectToRender(projName);
+      recordAuditEntry("RENDER_PROJECT_PUBLISHED", { project: projName, result });
+      return sendJSON(res, { success: true, result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  if (pathname === "/api/render/unpublish" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const projName = body.project;
+      const serviceId = body.serviceId;
+      const result = await suspendRenderService(projName, serviceId);
+      recordAuditEntry("RENDER_PROJECT_UNPUBLISHED", { project: projName, serviceId, result });
+      return sendJSON(res, { success: true, result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  if (pathname === "/api/render/resume" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const projName = body.project;
+      const serviceId = body.serviceId;
+      const result = await resumeRenderService(projName, serviceId);
+      recordAuditEntry("RENDER_PROJECT_RESUMED", { project: projName, serviceId, result });
+      return sendJSON(res, { success: true, result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  if (pathname === "/api/render/redeploy" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const projName = body.project;
+      const serviceId = body.serviceId;
+      const result = await redeployRenderService(projName, serviceId);
+      recordAuditEntry("RENDER_PROJECT_REDEPLOYED", { project: projName, serviceId, result });
+      return sendJSON(res, { success: true, result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  if (pathname === "/api/render/delete" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const projName = body.project;
+      const serviceId = body.serviceId;
+      const result = await deleteRenderService(projName, serviceId);
+      recordAuditEntry("RENDER_PROJECT_DELETED", { project: projName, serviceId, result });
+      return sendJSON(res, { success: true, result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
   // REST API: Cloud FinOps Zombie Reaper
   if (pathname === '/api/cloud/finops') {
     return sendJSON(res, {
@@ -813,6 +1144,7 @@ server.on('upgrade', (req, socket, head) => {
   ];
   socket.write(headers.join('\r\n') + '\r\n\r\n');
 
+  socket.on('error', () => {});
   // Spawn shell bridge (Pane A / PTY bridge)
   const shell = child_process.spawn('/bin/bash', ['-i'], {
     env: { ...process.env, TERM: 'xterm-256color', PS1: 'manisoft@sovereign:~$ ' }
@@ -893,6 +1225,13 @@ function decodeWsFrame(buffer) {
 // ------------------------------------------------------------------------------
 // 7. LAUNCH DAEMON WITH ZERO-DEFECT RESILIENCE
 // ------------------------------------------------------------------------------
+server.on('clientError', (err, socket) => {
+  try {
+    if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+    socket.destroy();
+  } catch (e) {}
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`======================================================================`);
   console.log(`[MANI$OFT CORE OS // MISSION CONTROL v100.0 - SOVEREIGN SINGULARITY]`);

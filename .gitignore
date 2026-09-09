@@ -10,3 +10,4 @@ node_modules/
 PUBLIC_ONLINE_URL.txt
 .manisoft_sessions.json
 
+render.json
