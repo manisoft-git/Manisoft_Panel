@@ -135,26 +135,9 @@ function triggerStealthHUD() {
   extractNonceFromDOM();
   sound.tap();
   if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
-  stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s] (Click to Auto-Fill)`;
+  stealthToast.textContent = `[SYS_SEC_DIAG // SEED: ${currentNonceCode} // EXPIRES 180s]`;
   stealthToast.classList.remove('hidden');
-
-  // Auto-fill password on modal for instant mobile clearance
-  const authPw = document.getElementById('auth-password');
-  if (authPw) {
-    authPw.value = `$$manisoft11console${currentNonceCode}`;
-    authPw.focus();
-  }
-
   setTimeout(() => stealthToast.classList.add('hidden'), 5000);
-}
-
-if (stealthToast) {
-  stealthToast.addEventListener('click', () => {
-    const authPw = document.getElementById('auth-password');
-    if (authPw) {
-      authPw.value = `$$manisoft11console${currentNonceCode}`;
-    }
-  });
 }
 
 // Hardware Motion Panic Shake (>25 m/s²)
@@ -326,21 +309,125 @@ function renderActiveDeck() {
   }
 }
 
-// Interactive Terminal NOC Deck
+let terminalMode = 'antigravity'; // 'antigravity' or 'bash'
+let voiceReplyEnabled = true;
+let isRecordingVoice = false;
+let speechRecognizer = null;
+
+function speakAntigravityResponse(text) {
+  if (!voiceReplyEnabled || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const spokenText = text.replace(/```[\s\S]*?```/g, 'Code block omitted.').slice(0, 600);
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.rate = 1.05;
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {}
+}
+
+function startVoiceRecognition() {
+  const micBtn = document.querySelector('.touch-key[data-key="MIC"]');
+  if (activeDeck !== 'terminal') {
+    switchDeck('terminal');
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    const fallback = prompt('Speak or enter prompt for Antigravity:');
+    if (fallback && fallback.trim()) {
+      const termInput = document.querySelector('#term-input');
+      if (termInput) {
+        termInput.value = fallback.trim();
+        const termSend = document.querySelector('#btn-term-send');
+        if (termSend) termSend.click();
+      }
+    }
+    return;
+  }
+
+  if (isRecordingVoice && speechRecognizer) {
+    try { speechRecognizer.stop(); } catch (e) {}
+    isRecordingVoice = false;
+    if (micBtn) {
+      micBtn.classList.remove('recording');
+      micBtn.textContent = 'MIC';
+    }
+    return;
+  }
+
+  try {
+    speechRecognizer = new SpeechRecognition();
+    speechRecognizer.lang = 'en-US';
+    speechRecognizer.interimResults = true;
+    speechRecognizer.continuous = false;
+
+    isRecordingVoice = true;
+    if (micBtn) {
+      micBtn.classList.add('recording');
+      micBtn.textContent = '🎙️ REC';
+    }
+
+    speechRecognizer.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        transcript += event.results[i][0].transcript;
+      }
+      const termInput = document.querySelector('#term-input');
+      if (termInput) termInput.value = transcript;
+    };
+
+    speechRecognizer.onerror = (event) => {
+      isRecordingVoice = false;
+      if (micBtn) {
+        micBtn.classList.remove('recording');
+        micBtn.textContent = 'MIC';
+      }
+    };
+
+    speechRecognizer.onend = () => {
+      isRecordingVoice = false;
+      if (micBtn) {
+        micBtn.classList.remove('recording');
+        micBtn.textContent = 'MIC';
+      }
+      const termInput = document.querySelector('#term-input');
+      if (termInput && termInput.value.trim()) {
+        const termSend = document.querySelector('#btn-term-send');
+        if (termSend) termSend.click();
+      }
+    };
+
+    speechRecognizer.start();
+  } catch (err) {
+    isRecordingVoice = false;
+    if (micBtn) {
+      micBtn.classList.remove('recording');
+      micBtn.textContent = 'MIC';
+    }
+  }
+}
+
+// Interactive Terminal NOC & Antigravity AI Bridge Deck
 function renderTerminalNOC(containerEl) {
+  const isAgy = terminalMode === 'antigravity';
   containerEl.innerHTML = `
     <div class="deck-header-row">
       <h3>TERMINAL NOC & ANTIGRAVITY PTY BRIDGE</h3>
-      <span class="pill pill-green">PANE A: ACTIVE [BASH]</span>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <span id="term-mode-toggle" class="pill ${isAgy ? 'pill-cyan' : 'pill-green'} terminal-mode-toggle" title="Click to toggle between Antigravity AI and Bash shell">
+          ${isAgy ? '🤖 MODE: ANTIGRAVITY AI' : '⚡ MODE: BASH SHELL'}
+        </span>
+        <button id="btn-voice-toggle" class="btn-ghost-sm" title="Toggle audio spoken response">${voiceReplyEnabled ? '🔊 VOICE: ON' : '🔈 VOICE: OFF'}</button>
+      </div>
     </div>
     <div class="terminal-deck">
       <div class="terminal-header">
-        <span>SOVEREIGN PTY STREAM // /bin/bash</span>
-        <span>HOTSTRINGS: ;;audit, ;;push</span>
+        <span>${isAgy ? 'SOVEREIGN AGENT // Antigravity Dual-Reasoning Engine' : 'SOVEREIGN PTY STREAM // /bin/bash'}</span>
+        <span>${isAgy ? 'PROMPTS: /boost, /plan, /goal, /audit' : 'HOTSTRINGS: ;;audit, ;;push'}</span>
       </div>
-      <div id="term-out" class="terminal-output">manisoft@sovereign:~$ Mani$oft Mission Control Ready.\n</div>
+      <div id="term-out" class="terminal-output">manisoft@sovereign:~$ Mani$oft Mission Control Ready.\n${isAgy ? '[ANTIGRAVITY] Agent connected. You can speak via MIC or type your instructions directly.\n' : '[BASH] Local shell active.\n'}</div>
       <div class="terminal-input-row">
-        <input type="text" id="term-input" placeholder="Type shell command or slash action (/boost, /parallel)..." autofocus>
+        <input type="text" id="term-input" placeholder="${isAgy ? 'Ask Antigravity anything or tap MIC to speak...' : 'Type shell command or slash action (/boost, /parallel)...'}" autofocus>
         <button id="btn-term-send" class="btn-primary-sm">SEND</button>
       </div>
     </div>
@@ -349,6 +436,24 @@ function renderTerminalNOC(containerEl) {
   const termInput = containerEl.querySelector('#term-input');
   const termOut = containerEl.querySelector('#term-out');
   const termSend = containerEl.querySelector('#btn-term-send');
+  const modeToggle = containerEl.querySelector('#term-mode-toggle');
+  const voiceToggle = containerEl.querySelector('#btn-voice-toggle');
+
+  if (voiceToggle) {
+    voiceToggle.addEventListener('click', () => {
+      sound.tap();
+      voiceReplyEnabled = !voiceReplyEnabled;
+      voiceToggle.textContent = voiceReplyEnabled ? '🔊 VOICE: ON' : '🔈 VOICE: OFF';
+    });
+  }
+
+  if (modeToggle) {
+    modeToggle.addEventListener('click', () => {
+      sound.tap();
+      terminalMode = terminalMode === 'antigravity' ? 'bash' : 'antigravity';
+      renderTerminalNOC(containerEl);
+    });
+  }
 
   const executeCmd = async () => {
     const rawVal = termInput.value.trim();
@@ -358,26 +463,54 @@ function renderTerminalNOC(containerEl) {
     // Client-side WASM Secret Sanitizer
     let sanitized = rawVal.replace(/(AIza[0-9A-Za-z-_]{35}|sk-[a-zA-Z0-9]{32,}|ghp_[a-zA-Z0-9]{36})/g, '[REDACTED_SECRET]');
 
-    termOut.textContent += `\nmanisoft@sovereign:~$ ${sanitized}\n`;
+    const promptIsAgy = terminalMode === 'antigravity' || sanitized.startsWith('/') || sanitized.startsWith('agy ');
+    const promptPrefix = promptIsAgy ? 'operator@antigravity:~$ ' : 'manisoft@sovereign:~$ ';
+    termOut.textContent += `\n${promptPrefix}${sanitized}\n`;
     termInput.value = '';
 
-    // Dispatch to MCP terminal endpoint
-    try {
-      const res = await fetch('/api/mcp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method: 'dispatch_terminal_command', params: { command: sanitized } })
-      });
-      const data = await res.json();
-      if (data.result && data.result.output) {
-        termOut.textContent += data.result.output;
-      } else if (data.result && data.result.error) {
-        termOut.textContent += `[-] Error: ${data.result.error}\n`;
-      }
+    if (promptIsAgy) {
+      termOut.textContent += `[ANTIGRAVITY // REASONING...]\n`;
       termOut.scrollTop = termOut.scrollHeight;
-    } catch (err) {
-      termOut.textContent += `[-] Dispatch failed: ${err.message}\n`;
+
+      try {
+        const cleanPrompt = sanitized.replace(/^agy\s+/i, '');
+        const res = await fetch('/api/mcp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'ask_antigravity', params: { prompt: cleanPrompt } })
+        });
+        const data = await res.json();
+        termOut.textContent = termOut.textContent.replace(`[ANTIGRAVITY // REASONING...]\n`, '');
+        if (data.result && (data.result.output || data.result.reply)) {
+          const reply = data.result.output || data.result.reply;
+          termOut.textContent += `🤖 Antigravity:\n${reply}\n\n`;
+          speakAntigravityResponse(reply);
+        } else if (data.result && data.result.error) {
+          termOut.textContent += `[-] Antigravity Error: ${data.result.error}\n`;
+        }
+      } catch (err) {
+        termOut.textContent = termOut.textContent.replace(`[ANTIGRAVITY // REASONING...]\n`, '');
+        termOut.textContent += `[-] Antigravity Dispatch failed: ${err.message}\n`;
+      }
+    } else {
+      // Dispatch to bash shell
+      try {
+        const res = await fetch('/api/mcp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'dispatch_terminal_command', params: { command: sanitized, mode: 'bash' } })
+        });
+        const data = await res.json();
+        if (data.result && data.result.output) {
+          termOut.textContent += data.result.output;
+        } else if (data.result && data.result.error) {
+          termOut.textContent += `[-] Error: ${data.result.error}\n`;
+        }
+      } catch (err) {
+        termOut.textContent += `[-] Dispatch failed: ${err.message}\n`;
+      }
     }
+    termOut.scrollTop = termOut.scrollHeight;
   };
 
   if (termSend) termSend.addEventListener('click', executeCmd);
@@ -437,6 +570,10 @@ document.querySelectorAll('.touch-key').forEach(key => {
   key.addEventListener('click', () => {
     sound.tap();
     const val = key.dataset.key;
+    if (val === 'MIC') {
+      startVoiceRecognition();
+      return;
+    }
     const termInput = document.querySelector('#term-input');
     if (termInput) {
       if (val === 'CTRL_C') termInput.value = '';
@@ -459,6 +596,59 @@ initRadialDial((action) => {
     alert('Buffer caches flushed.');
   }
 });
+
+const sidePublishBtn = document.getElementById('btn-side-publish');
+if (sidePublishBtn) {
+  sidePublishBtn.addEventListener('click', async () => {
+    sound.tap();
+    switchDeck('fleet');
+    sidePublishBtn.textContent = '⚡ Publishing...';
+    try {
+      const res = await fetch('/api/fleet/publish', { method: 'POST' });
+      const data = await res.json();
+      sound.success();
+      alert(data.message || 'Entire fleet published.');
+    } catch (e) {
+      sound.error();
+      alert('Fleet publish failed: ' + e.message);
+    }
+    sidePublishBtn.textContent = '⚡ Publish Fleet';
+    renderActiveDeck();
+  });
+}
+
+const sideSyncBtn = document.getElementById('btn-side-sync');
+if (sideSyncBtn) {
+  sideSyncBtn.addEventListener('click', async () => {
+    sound.tap();
+    switchDeck('fleet');
+    sideSyncBtn.textContent = '🐙 Syncing...';
+    try {
+      const res = await fetch('/api/fleet/sync', { method: 'POST' });
+      const data = await res.json();
+      sound.success();
+      alert(data.message || 'Repositories synced.');
+    } catch (e) {
+      sound.error();
+      alert('Sync failed: ' + e.message);
+    }
+    sideSyncBtn.textContent = '🐙 Sync GitHub';
+    renderActiveDeck();
+  });
+}
+
+const sideFlushBtn = document.getElementById('btn-side-flush');
+if (sideFlushBtn) {
+  sideFlushBtn.addEventListener('click', async () => {
+    sound.tap();
+    await fetch('/api/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method: 'dispatch_terminal_command', params: { command: 'sync' } })
+    });
+    alert('Buffer caches flushed.');
+  });
+}
 
 // Boot init
 checkClearance();

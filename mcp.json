@@ -9,6 +9,7 @@
     { "name": "execute_sql", "description": "Queries in-memory or SQLite database." },
     { "name": "read_project_file", "description": "Reads file contents safely." },
     { "name": "dispatch_terminal_command", "description": "Runs shell command with sandboxing." },
+    { "name": "ask_antigravity", "description": "Speaks directly to Antigravity AI Agent with full context and voice capability." },
     { "name": "rollback_ast_node", "description": "Reverts specific AST node or function." },
     { "name": "semantic_vector_search", "description": "Searches vector scratchpad." },
     { "name": "shadow_overlay_test", "description": "Executes speculative build on tmpfs OverlayFS." },

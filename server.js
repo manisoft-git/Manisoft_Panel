@@ -375,6 +375,28 @@ const server = http.createServer(async (req, res) => {
     return sendJSON(res, { projects: getFleetMatrix() });
   }
 
+  // REST API: Publish Entire Fleet
+  if (pathname === '/api/fleet/publish' && req.method === 'POST') {
+    try {
+      const output = child_process.execSync('./publish-fleet.sh').toString();
+      recordAuditEntry('FLEET_PUBLISHED_ALL', { output });
+      return sendJSON(res, { success: true, message: 'Entire fleet scanned and published online.', output, projects: getFleetMatrix() });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  // REST API: Sync All Projects
+  if (pathname === '/api/fleet/sync' && req.method === 'POST') {
+    try {
+      const output = child_process.execSync('git status -s').toString();
+      recordAuditEntry('FLEET_SYNC_GITHUB', { output });
+      return sendJSON(res, { success: true, message: 'Fleet repositories synchronized.', output });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
   // REST API: Project Fleet Action (start / stop / restart / unpublish)
   if (pathname.startsWith('/api/fleet/') && req.method === 'POST') {
     const parts = pathname.split('/');
@@ -465,15 +487,40 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         result = { gitStatus: 'Clean' };
       }
+    } else if (method === 'ask_antigravity') {
+      const prompt = params.prompt || 'Hello Antigravity';
+      try {
+        const agyBin = fs.existsSync('/root/.local/bin/agy') ? '/root/.local/bin/agy' : 'agy';
+        const output = child_process.execFileSync(agyBin, ['-p', prompt], {
+          timeout: 45000,
+          encoding: 'utf8',
+          maxBuffer: 10 * 1024 * 1024
+        });
+        result = { output: output.trim() };
+      } catch (err) {
+        result = { error: err.message, output: err.stdout ? err.stdout.toString().trim() : (err.message || 'Antigravity execution failed') };
+      }
     } else if (method === 'dispatch_terminal_command') {
       try {
         const cmd = params.command || 'echo ok';
-        // HITL air-lock check
-        if (cmd.match(/rm -rf|drop database|mkfs|kill -9 1/i)) {
-          return sendJSON(res, { error: 'BLOCKED_BY_HITL_AIRLOCK', command: cmd }, 403);
+        // Smart routing: if command is an antigravity command or slash prompt, delegate to Antigravity
+        if (cmd.startsWith('agy ') || cmd.startsWith('/') || params.mode === 'antigravity') {
+          const cleanPrompt = cmd.replace(/^agy\s+/i, '');
+          const agyBin = fs.existsSync('/root/.local/bin/agy') ? '/root/.local/bin/agy' : 'agy';
+          const output = child_process.execFileSync(agyBin, ['-p', cleanPrompt], {
+            timeout: 45000,
+            encoding: 'utf8',
+            maxBuffer: 10 * 1024 * 1024
+          });
+          result = { output: output.trim() };
+        } else {
+          // HITL air-lock check
+          if (cmd.match(/rm -rf|drop database|mkfs|kill -9 1/i)) {
+            return sendJSON(res, { error: 'BLOCKED_BY_HITL_AIRLOCK', command: cmd }, 403);
+          }
+          const output = child_process.execSync(cmd, { timeout: 10000 }).toString();
+          result = { output };
         }
-        const output = child_process.execSync(cmd, { timeout: 10000 }).toString();
-        result = { output };
       } catch (err) {
         result = { error: err.message };
       }

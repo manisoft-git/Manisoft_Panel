@@ -119,6 +119,42 @@ export async function renderFleetMatrix(containerEl) {
       });
     });
 
+    const publishAllBtn = containerEl.querySelector('#btn-publish-all');
+    if (publishAllBtn) {
+      publishAllBtn.addEventListener('click', async () => {
+        sound.tap();
+        publishAllBtn.textContent = '⚡ PUBLISHING...';
+        try {
+          const res = await fetch('/api/fleet/publish', { method: 'POST' });
+          const data = await res.json();
+          sound.success();
+          alert(data.message || 'Entire fleet published.');
+        } catch (e) {
+          sound.error();
+          alert('Fleet publish failed: ' + e.message);
+        }
+        renderFleetMatrix(containerEl);
+      });
+    }
+
+    const syncAllBtn = containerEl.querySelector('#btn-sync-all');
+    if (syncAllBtn) {
+      syncAllBtn.addEventListener('click', async () => {
+        sound.tap();
+        syncAllBtn.textContent = '🐙 SYNCING...';
+        try {
+          const res = await fetch('/api/fleet/sync', { method: 'POST' });
+          const data = await res.json();
+          sound.success();
+          alert(data.message || 'Repositories synced.');
+        } catch (e) {
+          sound.error();
+          alert('Sync failed: ' + e.message);
+        }
+        renderFleetMatrix(containerEl);
+      });
+    }
+
     const refreshBtn = containerEl.querySelector('#btn-fleet-refresh');
     if (refreshBtn) refreshBtn.addEventListener('click', () => { sound.tap(); renderFleetMatrix(containerEl); });
 
