@@ -25,7 +25,7 @@ export async function renderFleetMatrix(containerEl) {
       }) || null;
     });
 
-    const panelUrl = "https://manisoft-mission-control.onrender.com";
+    const panelUrl = "https://manisoft-panel.onrender.com";
 
     let html = `
       <!-- Master Panel 24/7 Cloud Host Banner -->
