@@ -362,7 +362,7 @@ function escapeHtml(str) {
   });
 }
 
-function speakAntigravityResponse(text) {
+function speakManiResponse(text) {
   if (!voiceReplyEnabled || !('speechSynthesis' in window)) return;
   try {
     window.speechSynthesis.cancel();
@@ -376,8 +376,9 @@ function speakAntigravityResponse(text) {
     window.speechSynthesis.speak(utterance);
   } catch (e) {}
 }
+const speakAntigravityResponse = speakManiResponse;
 
-function openAntigravityModal(initialPrompt = '') {
+function openManiModal(initialPrompt = '') {
   if (agyModal) {
     agyModal.classList.remove('hidden');
     sound.tap();
@@ -390,8 +391,9 @@ function openAntigravityModal(initialPrompt = '') {
     }
   }
 }
+const openAntigravityModal = openManiModal;
 
-function closeAntigravityModal() {
+function closeManiModal() {
   if (agyModal) {
     agyModal.classList.add('hidden');
     sound.tap();
@@ -399,6 +401,7 @@ function closeAntigravityModal() {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   }
 }
+const closeAntigravityModal = closeManiModal;
 
 function stopVoiceRecognition() {
   if (speechRecognizer) {
@@ -507,7 +510,7 @@ function toggleVoiceRecognition(targetInputId = 'comm-input') {
   }
 }
 
-async function sendAntigravityDialogue(promptText) {
+async function sendManiDialogue(promptText) {
   const stream = document.getElementById('comm-dialogue-stream');
   const commInput = document.getElementById('comm-input');
   if (!stream || !promptText) return;
@@ -523,15 +526,15 @@ async function sendAntigravityDialogue(promptText) {
   // Append AI thinking bubble
   const aiBubble = document.createElement('div');
   aiBubble.className = 'comm-bubble comm-ai';
-  aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 Antigravity AI:</div><div class="thinking-text" style="color: var(--text-dim); font-style: italic;">Reasoning & executing prompt...</div>`;
+  aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div><div class="thinking-text" style="color: var(--text-dim); font-style: italic;">Reasoning & executing prompt...</div>`;
   stream.appendChild(aiBubble);
   stream.scrollTop = stream.scrollHeight;
 
   const statusText = document.getElementById('comm-status-text');
-  if (statusText) statusText.textContent = 'Antigravity is reasoning...';
+  if (statusText) statusText.textContent = 'MANI AI is reasoning & executing...';
 
   try {
-    const res = await fetch('/api/antigravity/chat', {
+    const res = await fetch('/api/mani/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: promptText, continue: true })
@@ -540,44 +543,45 @@ async function sendAntigravityDialogue(promptText) {
     const reply = data.output || data.reply || data.error || 'No response produced.';
 
     const formattedReply = escapeHtml(reply).replace(/\n/g, '<br>');
-    aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 Antigravity AI:</div><div>${formattedReply}</div>`;
+    aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div><div>${formattedReply}</div>`;
 
     if (data.success !== false) {
       sound.success();
-      speakAntigravityResponse(reply);
+      speakManiResponse(reply);
     } else {
       sound.error();
     }
   } catch (err) {
-    aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-red);">🤖 Antigravity Error:</div><div>Failed to dispatch: ${escapeHtml(err.message)}</div>`;
+    aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-red);">🤖 MANI AI Error:</div><div>Failed to dispatch: ${escapeHtml(err.message)}</div>`;
     sound.error();
   }
 
-  if (statusText) statusText.textContent = 'Ready. Speak via MIC or type message.';
+  if (statusText) statusText.textContent = 'Ready. Speak via MIC or type instructions for MANI AI.';
   stream.scrollTop = stream.scrollHeight;
 }
+const sendAntigravityDialogue = sendManiDialogue;
 
-// Interactive Terminal NOC & Antigravity AI Bridge Deck
+// Interactive Terminal NOC & MANI AI Bridge Deck
 function renderTerminalNOC(containerEl) {
   const isAgy = terminalMode === 'antigravity';
   containerEl.innerHTML = `
     <div class="deck-header-row">
-      <h3>TERMINAL NOC & ANTIGRAVITY PTY BRIDGE</h3>
+      <h3>TERMINAL NOC & MANI AI BRIDGE</h3>
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <span id="term-mode-toggle" class="pill ${isAgy ? 'pill-cyan' : 'pill-green'} terminal-mode-toggle" title="Click to toggle between Antigravity AI and Bash shell">
-          ${isAgy ? '🤖 MODE: ANTIGRAVITY AI' : '⚡ MODE: BASH SHELL'}
+        <span id="term-mode-toggle" class="pill ${isAgy ? 'pill-cyan' : 'pill-green'} terminal-mode-toggle" title="Click to toggle between MANI AI and Bash shell">
+          ${isAgy ? '🤖 MODE: MANI AI' : '⚡ MODE: BASH SHELL'}
         </span>
         <button id="btn-voice-toggle" class="btn-ghost-sm" title="Toggle audio spoken response">${voiceReplyEnabled ? '🔊 VOICE: ON' : '🔈 VOICE: OFF'}</button>
       </div>
     </div>
     <div class="terminal-deck">
       <div class="terminal-header">
-        <span>${isAgy ? 'SOVEREIGN AGENT // Antigravity Dual-Reasoning Engine' : 'SOVEREIGN PTY STREAM // /bin/bash'}</span>
-        <span>${isAgy ? 'PROMPTS: /boost, /plan, /goal, /audit' : 'HOTSTRINGS: ;;audit, ;;push'}</span>
+        <span>${isAgy ? 'SOVEREIGN AGENT // MANI AI Autonomous Fleet Engine' : 'SOVEREIGN PTY STREAM // /bin/bash'}</span>
+        <span>${isAgy ? 'CAPABILITIES: Edit Projects, Full Read/Write, Git, Shell' : 'HOTSTRINGS: ;;audit, ;;push'}</span>
       </div>
-      <div id="term-out" class="terminal-output">manisoft@sovereign:~$ Mani$oft Mission Control Ready.\n${isAgy ? '[ANTIGRAVITY] Agent connected. You can speak via MIC or type your instructions directly.\n' : '[BASH] Local shell active.\n'}</div>
+      <div id="term-out" class="terminal-output">manisoft@sovereign:~$ Mani$oft Mission Control Ready.\n${isAgy ? '[MANI AI] Sovereign agent connected at ~/MANISOFT/projects. Full fleet read/write editing active. Speak via MIC or type instructions.\n' : '[BASH] Local shell active.\n'}</div>
       <div class="terminal-input-row">
-        <input type="text" id="term-input" placeholder="${isAgy ? 'Ask Antigravity anything or tap MIC to speak...' : 'Type shell command or slash action (/boost, /parallel)...'}" autofocus>
+        <input type="text" id="term-input" placeholder="${isAgy ? 'Instruct MANI AI to edit code, inspect fleet, or tap MIC to speak...' : 'Type shell command or slash action (/boost, /parallel)...'}" autofocus>
         <button id="btn-term-send" class="btn-primary-sm">SEND</button>
       </div>
     </div>
@@ -613,34 +617,34 @@ function renderTerminalNOC(containerEl) {
     // Client-side WASM Secret Sanitizer
     let sanitized = rawVal.replace(/(AIza[0-9A-Za-z-_]{35}|sk-[a-zA-Z0-9]{32,}|ghp_[a-zA-Z0-9]{36})/g, '[REDACTED_SECRET]');
 
-    const promptIsAgy = terminalMode === 'antigravity' || sanitized.startsWith('/') || sanitized.startsWith('agy ');
-    const promptPrefix = promptIsAgy ? 'operator@antigravity:~$ ' : 'manisoft@sovereign:~$ ';
+    const promptIsAgy = terminalMode === 'antigravity' || sanitized.startsWith('/') || sanitized.startsWith('mani ') || sanitized.startsWith('agy ');
+    const promptPrefix = promptIsAgy ? 'operator@mani-ai:~$ ' : 'manisoft@sovereign:~$ ';
     termOut.textContent += `\n${promptPrefix}${sanitized}\n`;
     termInput.value = '';
 
     if (promptIsAgy) {
-      termOut.textContent += `[ANTIGRAVITY // REASONING...]\n`;
+      termOut.textContent += `[MANI AI // REASONING & EXECUTING...]\n`;
       termOut.scrollTop = termOut.scrollHeight;
 
       try {
-        const cleanPrompt = sanitized.replace(/^agy\s+/i, '');
+        const cleanPrompt = sanitized.replace(/^(mani|agy)\s+/i, '');
         const res = await fetch('/api/mcp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'ask_antigravity', params: { prompt: cleanPrompt } })
+          body: JSON.stringify({ method: 'ask_mani', params: { prompt: cleanPrompt } })
         });
         const data = await res.json();
-        termOut.textContent = termOut.textContent.replace(`[ANTIGRAVITY // REASONING...]\n`, '');
+        termOut.textContent = termOut.textContent.replace(`[MANI AI // REASONING & EXECUTING...]\n`, '');
         if (data.result && (data.result.output || data.result.reply)) {
           const reply = data.result.output || data.result.reply;
-          termOut.textContent += `🤖 Antigravity:\n${reply}\n\n`;
-          speakAntigravityResponse(reply);
+          termOut.textContent += `🤖 MANI AI:\n${reply}\n\n`;
+          speakManiResponse(reply);
         } else if (data.result && data.result.error) {
-          termOut.textContent += `[-] Antigravity Error: ${data.result.error}\n`;
+          termOut.textContent += `[-] MANI AI Error: ${data.result.error}\n`;
         }
       } catch (err) {
-        termOut.textContent = termOut.textContent.replace(`[ANTIGRAVITY // REASONING...]\n`, '');
-        termOut.textContent += `[-] Antigravity Dispatch failed: ${err.message}\n`;
+        termOut.textContent = termOut.textContent.replace(`[MANI AI // REASONING & EXECUTING...]\n`, '');
+        termOut.textContent += `[-] MANI AI Dispatch failed: ${err.message}\n`;
       }
     } else {
       // Dispatch to bash shell
@@ -721,7 +725,7 @@ document.querySelectorAll('.touch-key').forEach(key => {
     sound.tap();
     const val = key.dataset.key;
     if (val === 'MIC') {
-      openAntigravityModal();
+      openManiModal();
       toggleVoiceRecognition('comm-input');
       return;
     }
@@ -734,16 +738,16 @@ document.querySelectorAll('.touch-key').forEach(key => {
   });
 });
 
-// Antigravity AI Comm Modal Event Listeners
+// MANI AI Comm Modal Event Listeners
 if (btnAgyComm) {
   btnAgyComm.addEventListener('click', () => {
-    openAntigravityModal();
+    openManiModal();
   });
 }
 
 const btnCommClose = document.getElementById('btn-comm-close');
 if (btnCommClose) {
-  btnCommClose.addEventListener('click', closeAntigravityModal);
+  btnCommClose.addEventListener('click', closeManiModal);
 }
 
 const btnCommVoiceToggle = document.getElementById('btn-comm-voice-toggle');
@@ -767,13 +771,13 @@ const btnCommSend = document.getElementById('btn-comm-send');
 if (btnCommSend && commInputEl) {
   btnCommSend.addEventListener('click', () => {
     const val = commInputEl.value.trim();
-    if (val) sendAntigravityDialogue(val);
+    if (val) sendManiDialogue(val);
   });
   commInputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const val = commInputEl.value.trim();
-      if (val) sendAntigravityDialogue(val);
+      if (val) sendManiDialogue(val);
     }
   });
 }
@@ -782,7 +786,7 @@ document.querySelectorAll('.comm-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     sound.tap();
     const prompt = chip.dataset.prompt;
-    if (prompt) sendAntigravityDialogue(prompt);
+    if (prompt) sendManiDialogue(prompt);
   });
 });
 

@@ -251,37 +251,51 @@ const mimeTypes = {
   '.ico': 'image/x-icon'
 };
 
-// Antigravity AI Subsystem Bridge (Non-blocking, streaming/buffered, auto-skip permissions)
-async function callAntigravityAI(prompt, conversationMode = true) {
+// MANI AI Subsystem Bridge (Autonomous Agent Engine with Full Read/Write Fleet Permissions)
+async function callManiAI(prompt, conversationMode = true) {
   return new Promise((resolve) => {
     const agyBin = fs.existsSync('/root/.local/bin/agy') ? '/root/.local/bin/agy' : 'agy';
-    const cleanPrompt = (prompt || 'Hello Antigravity').trim();
-    const args = ['-p', cleanPrompt, '--dangerously-skip-permissions', '--effort', 'low'];
+    const cleanPrompt = (prompt || 'Hello MANI AI').trim();
+    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${PROJECTS_DIR} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]\n\n${cleanPrompt}`;
+
+    const args = [
+      '-p', systemIdentity,
+      '--dangerously-skip-permissions',
+      '--add-dir', PROJECTS_DIR,
+      '--effort', 'low'
+    ];
     if (conversationMode) {
       args.push('--continue');
     }
 
     const startTime = Date.now();
     child_process.execFile(agyBin, args, {
-      timeout: 60000,
+      cwd: PROJECTS_DIR,
+      timeout: 180000,
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
-      env: { ...process.env, CI: 'true', NONINTERACTIVE: '1' }
+      env: { ...process.env, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
     }, (err, stdout, stderr) => {
       if (err) {
         // If --continue failed (e.g. no active session existed yet), retry cleanly without --continue
         if (conversationMode) {
-          child_process.execFile(agyBin, ['-p', cleanPrompt, '--dangerously-skip-permissions', '--effort', 'low'], {
-            timeout: 60000,
+          child_process.execFile(agyBin, [
+            '-p', systemIdentity,
+            '--dangerously-skip-permissions',
+            '--add-dir', PROJECTS_DIR,
+            '--effort', 'low'
+          ], {
+            cwd: PROJECTS_DIR,
+            timeout: 180000,
             encoding: 'utf8',
             maxBuffer: 10 * 1024 * 1024,
-            env: { ...process.env, CI: 'true', NONINTERACTIVE: '1' }
+            env: { ...process.env, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
           }, (retryErr, retryStdout, retryStderr) => {
             const outText = (retryStdout || '') + (retryStderr || '');
             if (retryErr) {
               resolve({
                 success: false,
-                output: outText.trim() || retryErr.message || 'Antigravity execution failed',
+                output: outText.trim() || retryErr.message || 'MANI AI execution failed',
                 error: retryErr.message,
                 latencyMs: Date.now() - startTime
               });
@@ -298,7 +312,7 @@ async function callAntigravityAI(prompt, conversationMode = true) {
         const outText = (stdout || '') + (stderr || '');
         resolve({
           success: false,
-          output: outText.trim() || err.message || 'Antigravity execution failed',
+          output: outText.trim() || err.message || 'MANI AI execution failed',
           error: err.message,
           latencyMs: Date.now() - startTime
         });
@@ -313,6 +327,8 @@ async function callAntigravityAI(prompt, conversationMode = true) {
     });
   });
 }
+
+const callAntigravityAI = callManiAI;
 
 const server = http.createServer(async (req, res) => {
   rotateNonceIfExpired();
@@ -545,16 +561,16 @@ const server = http.createServer(async (req, res) => {
     return sendJSON(res, { dispatched: true, channel: body.channel || 'telegram' });
   }
 
-  // REST API: Direct Antigravity Conversational Comm Bridge
-  if (pathname === '/api/antigravity/chat' && req.method === 'POST') {
+  // REST API: Direct MANI AI Conversational Comm Bridge (Autonomous Fleet Partner)
+  if ((pathname === '/api/mani/chat' || pathname === '/api/antigravity/chat') && req.method === 'POST') {
     const body = await parseBody(req);
     const prompt = (body.prompt || '').trim();
     if (!prompt) {
       return sendJSON(res, { success: false, error: 'Empty prompt provided' }, 400);
     }
     const conversationMode = body.continue !== false;
-    const aiResult = await callAntigravityAI(prompt, conversationMode);
-    recordAuditEntry('ANTIGRAVITY_CHAT_INTERACTION', { prompt: prompt.slice(0, 100), success: aiResult.success });
+    const aiResult = await callManiAI(prompt, conversationMode);
+    recordAuditEntry('MANI_AI_CHAT_INTERACTION', { prompt: prompt.slice(0, 100), success: aiResult.success });
     return sendJSON(res, aiResult);
   }
 
@@ -573,17 +589,17 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         result = { gitStatus: 'Clean' };
       }
-    } else if (method === 'ask_antigravity') {
-      const prompt = params.prompt || 'Hello Antigravity';
-      const aiRes = await callAntigravityAI(prompt, true);
+    } else if (method === 'ask_mani' || method === 'ask_antigravity') {
+      const prompt = params.prompt || 'Hello MANI AI';
+      const aiRes = await callManiAI(prompt, true);
       result = { output: aiRes.output, success: aiRes.success, error: aiRes.error };
     } else if (method === 'dispatch_terminal_command') {
       try {
         const cmd = params.command || 'echo ok';
-        // Smart routing: if command is an antigravity command or slash prompt, delegate to Antigravity
-        if (cmd.startsWith('agy ') || cmd.startsWith('/') || params.mode === 'antigravity') {
-          const cleanPrompt = cmd.replace(/^agy\s+/i, '');
-          const aiRes = await callAntigravityAI(cleanPrompt, true);
+        // Smart routing: if command is a MANI AI command or slash prompt, delegate to MANI AI
+        if (cmd.startsWith('mani ') || cmd.startsWith('agy ') || cmd.startsWith('/') || params.mode === 'mani' || params.mode === 'antigravity') {
+          const cleanPrompt = cmd.replace(/^(mani|agy)\s+/i, '');
+          const aiRes = await callManiAI(cleanPrompt, true);
           result = { output: aiRes.output, success: aiRes.success, error: aiRes.error };
         } else {
           // HITL air-lock check
