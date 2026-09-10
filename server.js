@@ -190,22 +190,14 @@ function rotateNonceIfExpired() {
 // Check every 10s for nonce rotation
 setInterval(rotateNonceIfExpired, 10000);
 
-const ACCEPTED_SECRETS = Array.from(new Set([
-  MASTER_SECRET,
-  '$$manisoft11console',
-  'pass@manisoft',
-  'pass@manifest'
-]));
+const SOVEREIGN_MASTER_SECRET = process.env.MASTER_SECRET || '$$manisoft11console';
 
-function isAuthorizedSecret(key) {
+function isAuthorizedPassSeed(key) {
   if (!key || typeof key !== 'string') return false;
   const clean = key.trim();
-  if (ACCEPTED_SECRETS.includes(clean)) return true;
-  for (const secret of ACCEPTED_SECRETS) {
-    if (clean === `${secret}${currentNonce.code}`) return true;
-    if (previousNonce.code && clean === `${secret}${previousNonce.code}`) return true;
-  }
-  return false;
+  const validCurr = `${SOVEREIGN_MASTER_SECRET}${currentNonce.code}`;
+  const validPrev = previousNonce.code ? `${SOVEREIGN_MASTER_SECRET}${previousNonce.code}` : null;
+  return clean === validCurr || (validPrev !== null && clean === validPrev);
 }
 
 // Merkle Audit Trail Logger
@@ -926,7 +918,7 @@ const server = http.createServer(async (req, res) => {
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const hasValidSession = isValidSession(token);
     const body = await parseBody(req);
-    const isMaster = body.master_secret && isAuthorizedSecret(body.master_secret);
+    const isMaster = body.master_secret && (body.master_secret.trim() === SOVEREIGN_MASTER_SECRET || isAuthorizedPassSeed(body.master_secret));
     if (!hasValidSession && !isZeroTrustBypass && !isMaster) {
       return sendJSON(res, { error: 'Unauthorized: Master clearance required to configure Google Client ID.' }, 401);
     }
@@ -1043,7 +1035,7 @@ const server = http.createServer(async (req, res) => {
 
     // 3. Sovereign Key / Master Pass-Seed verification (Direct operator authorization fallback)
     const sovereignKey = (body.sovereign_key || body.password || '').trim();
-    if (sovereignKey && isAuthorizedSecret(sovereignKey)) {
+    if (sovereignKey && isAuthorizedPassSeed(sovereignKey)) {
       const token = crypto.randomBytes(32).toString('hex');
         registerSession(token, { email: AUTHORIZED_EMAIL, clientIP, userAgent: req.headers['user-agent'] || '', authType: 'sovereign_secret' });
         recordAuditEntry('GOOGLE_PRO_SOVEREIGN_KEY_SUCCESS', { email: AUTHORIZED_EMAIL, clientIP });
@@ -1101,17 +1093,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     const providedPassword = (body.password || '').trim();
+    const validCurr = `${SOVEREIGN_MASTER_SECRET}${currentNonce.code}`;
+    const validPrev = previousNonce.code ? `${SOVEREIGN_MASTER_SECRET}${previousNonce.code}` : null;
 
-    if (isAuthorizedSecret(providedPassword)) {
+    if (isAuthorizedPassSeed(providedPassword)) {
       // Invalidate the used nonce immediately if nonce was used
-      for (const secret of ACCEPTED_SECRETS) {
-        if (providedPassword === `${secret}${currentNonce.code}`) {
-          currentNonce = { code: generateNonce(), expiresAt: Date.now() + 180000 };
-          break;
-        } else if (previousNonce.code && providedPassword === `${secret}${previousNonce.code}`) {
-          previousNonce = { code: null, expiresAt: 0 };
-          break;
-        }
+      if (providedPassword === validCurr) {
+        currentNonce = { code: generateNonce(), expiresAt: Date.now() + 180000 };
+      } else if (validPrev && providedPassword === validPrev) {
+        previousNonce = { code: null, expiresAt: 0 };
       }
       failedAttempts.delete(clientIP);
       const token = crypto.randomBytes(32).toString('hex');
