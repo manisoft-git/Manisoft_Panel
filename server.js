@@ -566,7 +566,12 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
     const thinkingInstruction = showThinking
       ? '\n[CRITICAL INSTRUCTION: You MUST begin your reply with your step-by-step reasoning, fleet code inspection, and execution plan enclosed in <thought>...</thought> tags. After the closing </thought> tag, provide your direct response to Manifest.]'
       : '';
-    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${PROJECTS_DIR} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]${thinkingInstruction}\n\n${cleanPrompt}`;
+    const gitProtocolInstruction = `
+[MANDATORY GIT SYNCHRONIZATION PROTOCOL: Manifest is actively pair-programming across both this Mission Control Web Panel and the CLI Antigravity terminal simultaneously. To prevent conflicts and desynchronization:
+1. BEFORE TOUCHING, EDITING, OR CREATING FILES in any repository, you MUST ALWAYS run 'git pull --rebase origin <branch>' (or 'git pull origin main') on that repository to fetch and integrate the latest changes.
+2. AFTER ANY CODE MODIFICATIONS OR FILE CHANGES, you MUST IMMEDIATELY stage the modified files, commit them with a concise descriptive message, and run 'git push origin <branch>' to push to remote GitHub.
+Never skip pulling before modifications, and never leave completed changes unpushed.]`;
+    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${PROJECTS_DIR} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]${gitProtocolInstruction}${thinkingInstruction}\n\n${cleanPrompt}`;
 
     const args = [
       '-p', systemIdentity,
@@ -883,9 +888,9 @@ const server = http.createServer(async (req, res) => {
   // REST API: Sync All Projects
   if (pathname === '/api/fleet/sync' && req.method === 'POST') {
     try {
-      const output = child_process.execSync('git status -s').toString();
+      const output = child_process.execSync('bash sync-fleet-github.sh', { cwd: __dirname }).toString();
       recordAuditEntry('FLEET_SYNC_GITHUB', { output });
-      return sendJSON(res, { success: true, message: 'Fleet repositories synchronized.', output });
+      return sendJSON(res, { success: true, message: 'Fleet repositories synchronized (pull + push).', output });
     } catch (err) {
       return sendJSON(res, { success: false, error: err.message }, 500);
     }

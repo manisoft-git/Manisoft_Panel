@@ -8,12 +8,12 @@ PROJECTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "=== [MANI\$OFT] AUTONOMOUS GITHUB FLEET MASS-SYNCHRONIZER ==="
 
-PROJECTS=(lumina passmaster_ai starshine strike_ops subway_surfers aether-transport)
+PROJECTS=(Manisoft_Panel lumina passmaster_ai starshine strike_ops subway_surfers aether-transport)
 
 for NAME in "${PROJECTS[@]}"; do
     PROJ_DIR="$PROJECTS_ROOT/$NAME"
     if [ -d "$PROJ_DIR" ]; then
-        echo "  [*] Inspecting Git status for $NAME..."
+        echo "  [*] Synchronizing $NAME with GitHub..."
         (cd "$PROJ_DIR" && {
             if [ ! -d ".git" ]; then
                 git init -b main 2>/dev/null || true
@@ -21,8 +21,21 @@ for NAME in "${PROJECTS[@]}"; do
             git config user.email "manifestsubeno@gmail.com" 2>/dev/null || true
             git config user.name "ManiSoft Operator" 2>/dev/null || true
             git branch -M main 2>/dev/null || true
+
+            # Pull remote changes first
+            if git remote get-url origin >/dev/null 2>&1; then
+                echo "      -> Pulling latest remote changes..."
+                git stash 2>/dev/null || true
+                git pull --rebase origin main 2>/dev/null || true
+                git stash pop 2>/dev/null || true
+            fi
+
+            # Stage, commit, and push
             git add -A 2>/dev/null || true
-            git commit -m "chore(fleet): sovereign fleet auto-sync" 2>/dev/null || true
+            if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+                git commit -m "chore(fleet): sovereign fleet auto-sync" 2>/dev/null || true
+            fi
+
             if git remote get-url origin >/dev/null 2>&1; then
                 echo "      -> Pushing to remote origin main..."
                 git push -u origin main 2>/dev/null || true
