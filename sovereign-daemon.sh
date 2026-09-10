@@ -298,6 +298,28 @@ stop_all() {
 }
 
 # ------------------------------------------------------------------------------
+# Reload Server Only (Preserving Cloudflare Tunnel & URL)
+# ------------------------------------------------------------------------------
+reload_server() {
+    echo "[*] Reloading Server Daemon (preserving Cloudflare Tunnel & permanent URL)..."
+    if [ -f "$SERVER_PID_FILE" ]; then
+        local spid
+        spid="$(cat "$SERVER_PID_FILE" 2>/dev/null || true)"
+        if is_pid_alive "$spid"; then kill "$spid" 2>/dev/null || true; fi
+        rm -f "$SERVER_PID_FILE"
+    fi
+    pkill -f "node.*server\.js" 2>/dev/null || true
+    if command -v fuser >/dev/null 2>&1; then
+        fuser -k ${PORT}/tcp 2>/dev/null || true
+    elif [ -x "/data/data/com.termux/files/usr/bin/fuser" ]; then
+        /data/data/com.termux/files/usr/bin/fuser -k ${PORT}/tcp 2>/dev/null || true
+    fi
+    sleep 1
+    start_server
+    echo "[✓] Server daemon reloaded. Active URL preserved intact."
+}
+
+# ------------------------------------------------------------------------------
 # Status
 # ------------------------------------------------------------------------------
 status() {
@@ -356,7 +378,31 @@ case "$ACTION" in
     stop)
         stop_all
         ;;
+    reload)
+        acquire_wake_lock
+        reload_server
+        print_online_url
+        ;;
     restart)
+        tpid=""
+        if [ -f "$TUNNEL_PID_FILE" ]; then tpid=$(cat "$TUNNEL_PID_FILE" 2>/dev/null || true); fi
+        if is_pid_alive "$tpid"; then
+            echo "[*] Active Cloudflare Tunnel detected. Preserving tunnel and permanent URL..."
+            acquire_wake_lock
+            reload_server
+            print_online_url
+        else
+            stop_all
+            sleep 1
+            acquire_wake_lock
+            start_server
+            start_tunnel
+            start_watchdog
+            print_online_url
+        fi
+        ;;
+    reset-tunnel)
+        echo "[*] Force-regenerating Cloudflare Tunnel URL..."
         stop_all
         sleep 1
         acquire_wake_lock
@@ -372,7 +418,7 @@ case "$ACTION" in
         print_online_url
         ;;
     *)
-        echo "Usage: $0 {start|stop|restart|status|url}"
+        echo "Usage: $0 {start|stop|reload|restart|reset-tunnel|status|url}"
         exit 1
         ;;
 esac
