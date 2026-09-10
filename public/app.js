@@ -541,11 +541,25 @@ if (loginForm) {
 // ------------------------------------------------------------------------------
 // 2. MULTI-DECK NAVIGATION SWITCHER
 // ------------------------------------------------------------------------------
+window.toggleMobileDecks = function(forceState) {
+  const sidebar = document.querySelector('.left-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!sidebar) return;
+  const shouldOpen = typeof forceState === 'boolean' ? forceState : !sidebar.classList.contains('mobile-open');
+  sidebar.classList.toggle('mobile-open', shouldOpen);
+  if (backdrop) backdrop.classList.toggle('active', shouldOpen);
+  if (sound && sound.tap) sound.tap();
+};
+
 function switchDeck(deckId) {
   activeDeck = deckId;
   navItems.forEach(item => {
     item.classList.toggle('active', item.dataset.deck === deckId);
   });
+  const sidebar = document.querySelector('.left-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  if (backdrop) backdrop.classList.remove('active');
   sound.tap();
   renderActiveDeck();
 }
