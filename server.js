@@ -43,7 +43,7 @@ const PROJECTS_DIR = path.resolve(__dirname, '..');
 // Google Identity & OAuth2 Configuration
 const GOOGLE_AUTH_FILE = path.join(__dirname, 'google-auth.json');
 function getGoogleAuthConfig() {
-  let clientId = process.env.GOOGLE_CLIENT_ID || '';
+  let clientId = process.env.GOOGLE_CLIENT_ID || '26030032124-5590g0muvs4mb7p3npsc6155su6ass07.apps.googleusercontent.com';
   try {
     if (fs.existsSync(GOOGLE_AUTH_FILE)) {
       const data = JSON.parse(fs.readFileSync(GOOGLE_AUTH_FILE, 'utf8'));
