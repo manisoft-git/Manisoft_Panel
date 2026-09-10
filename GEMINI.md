@@ -22,3 +22,13 @@ As soon as code modifications, fixes, or features are implemented and verified:
 
 NEVER skip pulling before starting changes.
 NEVER finish a turn leaving uncommitted or unpushed modifications in any repository.
+
+# Standard Form Field Placeholders Protocol
+
+## MANDATORY PLACEHOLDERS ACROSS ALL PROJECTS (NOW AND FUTURE)
+Whenever form inputs for user accounts, registration, login, profile editing, guest inputs, or identity information are implemented or modified in ANY project, agents MUST ALWAYS use these standardized placeholders:
+- **Username**: 'tobiolive5850'
+- **Surname**: 'Tobi'
+- **Firstname**: 'Olive'
+- **Full Name (Surname Firstname)**: 'Tobi Olive' (or 'Surname Firstname (e.g. Tobi Olive)' where format guidance is needed)
+- **Email**: 'tobi585olive@gmail.com'
