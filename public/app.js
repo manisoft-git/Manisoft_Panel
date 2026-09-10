@@ -279,6 +279,129 @@ if (panicHeaderBtn) {
   panicHeaderBtn.addEventListener('click', executePanicKill);
 }
 
+// ------------------------------------------------------------------------------
+// GOOGLE PRO OPERATOR AIR-LOCK & SESSION CLEARANCE
+// ------------------------------------------------------------------------------
+let googleAuthConfig = { googleClientId: null, operatorEmail: 'manifestsubeno@gmail.com', isConfigured: false, zeroTrust: false };
+
+async function initGoogleAuth() {
+  try {
+    const res = await fetch('/api/auth/config');
+    if (res.ok) {
+      googleAuthConfig = await res.json();
+    }
+  } catch (e) {
+    console.error('Failed to load auth config:', e);
+  }
+
+  const detectionText = document.getElementById('google-detection-text');
+  const statusPill = document.getElementById('google-status-pill');
+
+  if (googleAuthConfig.zeroTrust) {
+    if (detectionText) detectionText.innerHTML = `<span style="color: var(--color-neon);">Cloudflare Zero Trust Active: Verified as <strong>${escapeHtml(googleAuthConfig.operatorEmail)}</strong></span>`;
+    if (statusPill) { statusPill.textContent = 'ZERO TRUST OK'; statusPill.className = 'pill pill-green'; }
+    return;
+  }
+
+  if (googleAuthConfig.googleClientId) {
+    if (detectionText) detectionText.innerHTML = `<span style="color: var(--color-cyan);">Google Identity Active: Checking browser for <strong>${escapeHtml(googleAuthConfig.operatorEmail)}</strong>...</span>`;
+    if (statusPill) { statusPill.textContent = 'GIS INITIALIZED'; statusPill.className = 'pill pill-cyan'; }
+    setupGoogleGis();
+  } else {
+    if (detectionText) detectionText.innerHTML = `<span style="color: #f59e0b;">⚠️ Google Client ID required for automatic account detection. Setup below or enter Master Pass-Seed.</span>`;
+    if (statusPill) { statusPill.textContent = 'SETUP NEEDED'; statusPill.className = 'pill pill-amber'; }
+  }
+}
+
+function setupGoogleGis() {
+  if (!googleAuthConfig.googleClientId) return;
+  const startGis = () => {
+    if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) return;
+    try {
+      google.accounts.id.initialize({
+        client_id: googleAuthConfig.googleClientId,
+        callback: handleGoogleCredentialResponse,
+        auto_select: true,
+        cancel_on_tap_outside: false,
+        context: 'signin'
+      });
+
+      const container = document.getElementById('g_id_signin_container');
+      if (container) {
+        container.innerHTML = '';
+        google.accounts.id.renderButton(container, {
+          theme: 'filled_black',
+          size: 'large',
+          type: 'standard',
+          shape: 'pill',
+          text: 'signin_with',
+          logo_alignment: 'left',
+          width: 280
+        });
+      }
+
+      // Trigger Google One Tap for instant browser active account detection
+      google.accounts.id.prompt((notification) => {
+        const detectionText = document.getElementById('google-detection-text');
+        if (notification.isNotDisplayed()) {
+          console.log('[GIS] One Tap not displayed:', notification.getNotDisplayedReason());
+          if (detectionText) detectionText.innerHTML = `Google Account detection ready. Tap button to authenticate as <strong>${escapeHtml(googleAuthConfig.operatorEmail)}</strong>.`;
+        } else if (notification.isDismissedMoment()) {
+          console.log('[GIS] One Tap dismissed:', notification.getDismissedReason());
+        }
+      });
+    } catch (err) {
+      console.error('[GIS] Error initializing Google Identity:', err);
+    }
+  };
+
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+    startGis();
+  } else {
+    window.addEventListener('load', startGis);
+    setTimeout(startGis, 1200);
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  if (!response || !response.credential) {
+    alert('No Google credential returned.');
+    return;
+  }
+  const detectionText = document.getElementById('google-detection-text');
+  if (detectionText) {
+    detectionText.innerHTML = `<span style="color: var(--color-cyan);">Verifying Google credentials with Google OAuth2 servers...</span>`;
+  }
+  try {
+    const res = await fetch('/api/auth/google-pro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential })
+    });
+    const data = await res.json();
+    if (data.success) {
+      sound.success();
+      setStoredToken(data.token, true);
+      loginModal.classList.add('hidden');
+      const badge = document.getElementById('operator-badge');
+      if (badge && data.email) {
+        const photo = data.picture ? `<img src="${escapeHtml(data.picture)}" style="width: 18px; height: 18px; border-radius: 50%; vertical-align: middle; margin-right: 4px;">` : '';
+        badge.innerHTML = `<span class="dot-pulse green"></span>${photo}<span>OPERATOR: ${escapeHtml(data.email)} [GOOGLE PRO // VERIFIED]</span>`;
+      }
+      renderActiveDeck();
+    } else {
+      sound.error();
+      if (detectionText) {
+        detectionText.innerHTML = `<span style="color: #ef4444;">${escapeHtml(data.error || 'Unauthorized Google account.')}</span>`;
+      }
+      alert(data.error || 'Access Denied: Google verification failed.');
+    }
+  } catch (err) {
+    sound.error();
+    alert('Network error connecting to verification server.');
+  }
+}
+
 // Verify session clearance and keep Google Pro mail permanently authenticated
 async function checkClearance() {
   try {
@@ -317,46 +440,70 @@ async function checkClearance() {
 
     loginModal.classList.remove('hidden');
   } catch (e) {
-    if (getStoredToken()) {
-      loginModal.classList.add('hidden');
-    } else {
-      loginModal.classList.remove('hidden');
-    }
+    loginModal.classList.remove('hidden');
   }
 }
 
-// Google Pro One-Tap Sovereign Air-Lock Authentication
+// Google Pro Trigger Button
 const googleProBtn = document.getElementById('btn-google-pro-auth');
 if (googleProBtn) {
   googleProBtn.addEventListener('click', async () => {
     sound.tap();
-    try {
-      const res = await fetch('/api/auth/google-pro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'manifestsubeno@gmail.com' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        sound.success();
-        setStoredToken(data.token, true);
-        loginModal.classList.add('hidden');
-        const badge = document.getElementById('operator-badge');
-        if (badge && data.email) {
-          badge.innerHTML = `<span class="dot-pulse green"></span><span>OPERATOR: ${escapeHtml(data.email)} [GOOGLE PRO // VERIFIED]</span>`;
-        }
-        renderActiveDeck();
-      } else {
-        sound.error();
-        alert(data.error || 'Google Pro authentication failed.');
-      }
-    } catch (e) {
-      sound.error();
-      alert('Network error connecting to Google Pro Auth.');
+    if (googleAuthConfig.googleClientId && typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+      // Trigger Google account selector prompt
+      google.accounts.id.prompt();
+    } else {
+      // Prompt user to configure Google Client ID or use Pass-Seed
+      const drawer = document.getElementById('google-config-drawer');
+      if (drawer) drawer.classList.toggle('hidden');
+      alert(`Google Identity Air-Lock: To enable automatic browser account detection for ${googleAuthConfig.operatorEmail}, please configure your Google Cloud OAuth Client ID below or authenticate using your Master Pass-Seed.`);
     }
   });
 }
 
+// Setup Drawer Toggle & Save
+const toggleGoogleConfig = document.getElementById('toggle-google-config');
+const googleConfigDrawer = document.getElementById('google-config-drawer');
+if (toggleGoogleConfig && googleConfigDrawer) {
+  toggleGoogleConfig.addEventListener('click', (e) => {
+    e.preventDefault();
+    googleConfigDrawer.classList.toggle('hidden');
+  });
+}
+
+const btnSaveGoogleConfig = document.getElementById('btn-save-google-config');
+if (btnSaveGoogleConfig) {
+  btnSaveGoogleConfig.addEventListener('click', async () => {
+    const clientId = (document.getElementById('cfg-google-client-id').value || '').trim();
+    const masterSecret = (document.getElementById('cfg-master-secret').value || '').trim();
+    if (!clientId) {
+      alert('Please enter a valid Google OAuth Client ID.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/auth/google-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, master_secret: masterSecret })
+      });
+      const data = await res.json();
+      if (data.success) {
+        sound.success();
+        alert('Google OAuth Client ID saved successfully! Initializing Google Identity Air-Lock...');
+        googleConfigDrawer.classList.add('hidden');
+        await initGoogleAuth();
+      } else {
+        sound.error();
+        alert(data.error || 'Failed to save Google Client ID.');
+      }
+    } catch (e) {
+      sound.error();
+      alert('Network error saving Google configuration.');
+    }
+  });
+}
+
+// Master Secret / Pass-Seed Login Form
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -387,26 +534,6 @@ if (loginForm) {
     } catch (err) {
       sound.error();
       alert('Authentication network failure.');
-    }
-  });
-}
-
-// WebAuthn Biometric Trigger
-const webauthnBtn = document.getElementById('btn-webauthn');
-if (webauthnBtn) {
-  webauthnBtn.addEventListener('click', async () => {
-    sound.tap();
-    if (window.PublicKeyCredential) {
-      try {
-        sound.success();
-        setStoredToken('fido2_verified_' + Date.now(), true);
-        loginModal.classList.add('hidden');
-        renderActiveDeck();
-      } catch (e) {
-        sound.error();
-      }
-    } else {
-      alert('Biometric hardware authenticator not detected.');
     }
   });
 }
@@ -1072,5 +1199,7 @@ if (sideFlushBtn) {
 // Boot init
 updateSeedDisplay();
 checkClearance();
+initGoogleAuth();
 renderActiveDeck();
 pollTelemetry();
+

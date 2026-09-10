@@ -40,6 +40,81 @@ const PROJECTS_DIR = path.resolve(__dirname, '..');
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 });
 
+// Google Identity & OAuth2 Configuration
+const GOOGLE_AUTH_FILE = path.join(__dirname, 'google-auth.json');
+function getGoogleAuthConfig() {
+  let clientId = process.env.GOOGLE_CLIENT_ID || '';
+  try {
+    if (fs.existsSync(GOOGLE_AUTH_FILE)) {
+      const data = JSON.parse(fs.readFileSync(GOOGLE_AUTH_FILE, 'utf8'));
+      if (data.clientId) clientId = data.clientId.trim();
+    }
+  } catch (e) {}
+  return { clientId };
+}
+
+function saveGoogleAuthConfig(cfg) {
+  try {
+    fs.writeFileSync(GOOGLE_AUTH_FILE, JSON.stringify(cfg, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Cryptographically verifies Google ID token with Google's public OAuth2 tokeninfo service
+ */
+function verifyGoogleIdToken(idToken) {
+  return new Promise((resolve) => {
+    if (!idToken || typeof idToken !== 'string') {
+      return resolve({ valid: false, error: 'Missing Google ID token.' });
+    }
+    const cleanToken = idToken.trim();
+    if (!cleanToken) {
+      return resolve({ valid: false, error: 'Empty Google ID token.' });
+    }
+    const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(cleanToken)}`;
+    const req = https.get(url, { timeout: 10000 }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode === 200 && json.email) {
+            const isVerified = json.email_verified === 'true' || json.email_verified === true;
+            return resolve({
+              valid: true,
+              email: (json.email || '').toLowerCase().trim(),
+              email_verified: isVerified,
+              name: json.name || '',
+              picture: json.picture || '',
+              sub: json.sub,
+              aud: json.aud,
+              exp: parseInt(json.exp || '0', 10)
+            });
+          } else {
+            return resolve({
+              valid: false,
+              error: json.error_description || json.error || 'Google token rejected by Google OAuth2 tokeninfo.'
+            });
+          }
+        } catch (e) {
+          return resolve({ valid: false, error: 'Failed to parse Google OAuth2 response: ' + e.message });
+        }
+      });
+    });
+    req.on('error', (err) => {
+      return resolve({ valid: false, error: 'Google network verification failed: ' + err.message });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      return resolve({ valid: false, error: 'Google token verification request timed out.' });
+    });
+  });
+}
+
+
 // ------------------------------------------------------------------------------
 // 1. HARDENED SECURITY: SLIDING-WINDOW ROLLING NONCE ENGINE & BRUTE-FORCE DEFENSE
 // ------------------------------------------------------------------------------
@@ -771,11 +846,15 @@ const server = http.createServer(async (req, res) => {
   const cfUser = req.headers['cf-access-authenticated-user-email'];
   const isZeroTrustBypass = cfUser && cfUser.toLowerCase() === AUTHORIZED_EMAIL.toLowerCase();
 
-  // Root Page Serving with Dynamic Rolling Nonce Injection
+  // Root Page Serving (Clean injection, rolling seed withheld from unauthenticated DOM)
   if (pathname === '/' || pathname === '/index.html') {
     const indexPath = path.join(PUBLIC_DIR, 'index.html');
     if (fs.existsSync(indexPath)) {
       let content = fs.readFileSync(indexPath, 'utf8');
+      const authHeader = req.headers['authorization'] || req.headers['x-manisoft-token'] || '';
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      const hasAuth = isValidSession(token) || isZeroTrustBypass;
+
       const nonceBanner = `<!-- 
 ======================================================================
 [ MANI$OFT CORE OS // MISSION CONTROL v100.0 - SOVEREIGN SINGULARITY ]
@@ -787,7 +866,9 @@ const server = http.createServer(async (req, res) => {
       if (!content.includes(nonceBanner)) {
         content = nonceBanner + '\n' + content;
       }
-      content = content.replace('<head>', `<head>\n  <script>window.__MANISOFT_SEED__ = "${currentNonce.code}";</script>`);
+      if (hasAuth) {
+        content = content.replace('<head>', `<head>\n  <script>window.__MANISOFT_SEED__ = "${currentNonce.code}";</script>`);
+      }
       res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -808,6 +889,36 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=3600' });
       return fs.createReadStream(safePath).pipe(res);
     }
+  }
+
+  // REST API: Public Auth Configuration (for Google Identity Services initialization)
+  if (pathname === '/api/auth/config') {
+    const { clientId } = getGoogleAuthConfig();
+    return sendJSON(res, {
+      operatorEmail: AUTHORIZED_EMAIL,
+      googleClientId: clientId || null,
+      isConfigured: !!clientId,
+      zeroTrust: !!isZeroTrustBypass
+    });
+  }
+
+  // REST API: Configure Google OAuth Client ID
+  if (pathname === '/api/auth/google-config' && req.method === 'POST') {
+    const authHeader = req.headers['authorization'] || req.headers['x-manisoft-token'] || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const hasValidSession = isValidSession(token);
+    const body = await parseBody(req);
+    const isMaster = body.master_secret && body.master_secret.trim() === MASTER_SECRET;
+    if (!hasValidSession && !isZeroTrustBypass && !isMaster) {
+      return sendJSON(res, { error: 'Unauthorized: Master clearance required to configure Google Client ID.' }, 401);
+    }
+    const newClientId = (body.clientId || '').trim();
+    if (!newClientId) {
+      return sendJSON(res, { error: 'Client ID cannot be empty.' }, 400);
+    }
+    saveGoogleAuthConfig({ clientId: newClientId, updatedAt: new Date().toISOString() });
+    recordAuditEntry('GOOGLE_CLIENT_ID_UPDATED', { clientIP });
+    return sendJSON(res, { success: true, clientId: newClientId });
   }
 
   // REST API: Health Check
@@ -842,43 +953,113 @@ const server = http.createServer(async (req, res) => {
     return sendJSON(res, { valid: false, error: 'Session expired or invalid' }, 401);
   }
 
-  // REST API: Instant Google Pro Mail Operator Clearance & Token Generation
+  // REST API: Cryptographic Google Identity Services Verification & Operator Clearance
   if (pathname === '/api/auth/google-pro' && req.method === 'POST') {
     const body = await parseBody(req);
     if (body.sys_master_key) {
       bannedIPs.set(clientIP, Date.now() + 86400000);
       return sendJSON(res, { error: 'Security breach detected.' }, 403);
     }
+
+    // 1. Cloudflare Access Zero Trust verification
     if (isZeroTrustBypass) {
       const token = crypto.randomBytes(32).toString('hex');
-      registerSession(token, { email: cfUser, clientIP });
+      registerSession(token, { email: cfUser, clientIP, userAgent: req.headers['user-agent'] || '', authType: 'cloudflare_zero_trust' });
       recordAuditEntry('GOOGLE_PRO_ZERO_TRUST_AUTH', { email: cfUser, clientIP });
       return sendJSON(res, { success: true, token, email: cfUser, clearance: 'LEVEL_1', persistent: true, source: 'cloudflare_zero_trust' });
     }
-    const key = (body.sovereign_key || body.credential || '').trim();
-    const validCurr = `${MASTER_SECRET}${currentNonce.code}`;
-    const validPrev = previousNonce.code ? `${MASTER_SECRET}${previousNonce.code}` : null;
-    const isKeyApproved = !key || key === MASTER_SECRET || key === validCurr || (validPrev && key === validPrev);
-    const requestedEmail = (body.email || AUTHORIZED_EMAIL).toLowerCase();
 
-    if (isKeyApproved && requestedEmail === AUTHORIZED_EMAIL.toLowerCase()) {
+    // 2. Genuine Cryptographic Google ID Token verification (Google Identity Services / One Tap)
+    const googleCredential = (body.credential || body.id_token || '').trim();
+    if (googleCredential) {
+      const gResult = await verifyGoogleIdToken(googleCredential);
+      if (!gResult.valid) {
+        recordAuditEntry('GOOGLE_AUTH_TOKEN_FAILED', { clientIP, error: gResult.error });
+        return sendJSON(res, { success: false, error: `Google verification failed: ${gResult.error}` }, 401);
+      }
+
+      // STRICT OPERATOR DETECTION:
+      // Verify that the active account is manifestsubeno@gmail.com
+      if (gResult.email !== AUTHORIZED_EMAIL.toLowerCase()) {
+        recordAuditEntry('GOOGLE_AUTH_UNAUTHORIZED_ACCOUNT', { clientIP, attemptedEmail: gResult.email });
+        return sendJSON(res, {
+          success: false,
+          error: `Access Denied: Logged into Google as '${gResult.email}'. This terminal is strictly reserved for '${AUTHORIZED_EMAIL}'.`
+        }, 403);
+      }
+
+      if (!gResult.email_verified) {
+        recordAuditEntry('GOOGLE_AUTH_UNVERIFIED_EMAIL', { clientIP, email: gResult.email });
+        return sendJSON(res, { success: false, error: 'Access Denied: Google email is not verified.' }, 403);
+      }
+
+      const { clientId } = getGoogleAuthConfig();
+      if (clientId && gResult.aud && gResult.aud !== clientId) {
+        recordAuditEntry('GOOGLE_AUTH_AUD_MISMATCH', { clientIP, aud: gResult.aud, expected: clientId });
+        return sendJSON(res, { success: false, error: 'Google Client ID audience mismatch.' }, 403);
+      }
+
       const token = crypto.randomBytes(32).toString('hex');
-      registerSession(token, { email: AUTHORIZED_EMAIL, clientIP, userAgent: req.headers['user-agent'] || '' });
-      recordAuditEntry('GOOGLE_PRO_SOVEREIGN_LOGIN', { email: AUTHORIZED_EMAIL, clientIP });
+      registerSession(token, {
+        email: AUTHORIZED_EMAIL,
+        name: gResult.name,
+        picture: gResult.picture,
+        clientIP,
+        userAgent: req.headers['user-agent'] || '',
+        authType: 'google_identity_oauth'
+      });
+      recordAuditEntry('GOOGLE_AUTH_VERIFIED_SUCCESS', { email: AUTHORIZED_EMAIL, clientIP, name: gResult.name });
+
       return sendJSON(res, {
         success: true,
         token,
         email: AUTHORIZED_EMAIL,
+        name: gResult.name,
+        picture: gResult.picture,
         clearance: 'LEVEL_1',
         persistent: true,
-        message: `Authenticated as Sovereign Operator ${AUTHORIZED_EMAIL}`
+        source: 'google_identity',
+        message: `Verified Google Account active: ${AUTHORIZED_EMAIL}`
       });
     }
-    return sendJSON(res, { success: false, error: 'Unauthorized Google Pro clearance.' }, 401);
+
+    // 3. Sovereign Key / Master Pass-Seed verification (Direct operator authorization fallback)
+    const sovereignKey = (body.sovereign_key || body.password || '').trim();
+    if (sovereignKey) {
+      const validCurr = `${MASTER_SECRET}${currentNonce.code}`;
+      const validPrev = previousNonce.code ? `${MASTER_SECRET}${previousNonce.code}` : null;
+      if (sovereignKey === validCurr || (validPrev && sovereignKey === validPrev) || sovereignKey === MASTER_SECRET) {
+        const token = crypto.randomBytes(32).toString('hex');
+        registerSession(token, { email: AUTHORIZED_EMAIL, clientIP, userAgent: req.headers['user-agent'] || '', authType: 'sovereign_secret' });
+        recordAuditEntry('GOOGLE_PRO_SOVEREIGN_KEY_SUCCESS', { email: AUTHORIZED_EMAIL, clientIP });
+        return sendJSON(res, {
+          success: true,
+          token,
+          email: AUTHORIZED_EMAIL,
+          clearance: 'LEVEL_1',
+          persistent: true,
+          source: 'sovereign_key'
+        });
+      }
+    }
+
+    // STRICT REJECTION: Empty requests or unverified requests MUST NOT OPEN!
+    recordAuditEntry('GOOGLE_AUTH_EMPTY_OR_UNAUTHORIZED', { clientIP });
+    return sendJSON(res, {
+      success: false,
+      error: `Authentication failed. Active Google account '${AUTHORIZED_EMAIL}' verification required.`
+    }, 401);
   }
 
-  // REST API: Seed Telemetry (Returns active rolling cycle seed)
+  // REST API: Seed Telemetry (Returns active rolling cycle seed - requires auth or local)
   if (pathname === '/api/seed') {
+    const authHeader = req.headers['authorization'] || req.headers['x-manisoft-token'] || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const hasValidSession = isValidSession(token);
+    const isLocal = clientIP === '127.0.0.1' || clientIP === '::1' || clientIP === 'localhost';
+    if (!hasValidSession && !isZeroTrustBypass && !isLocal) {
+      return sendJSON(res, { error: 'Unauthorized: Sovereign clearance required to inspect rolling seed.' }, 401);
+    }
     rotateNonceIfExpired();
     return sendJSON(res, {
       seed: currentNonce.code,
@@ -909,17 +1090,17 @@ const server = http.createServer(async (req, res) => {
     const validCurr = `${MASTER_SECRET}${currentNonce.code}`;
     const validPrev = previousNonce.code ? `${MASTER_SECRET}${previousNonce.code}` : null;
 
-    if (providedPassword === validCurr || (validPrev && providedPassword === validPrev)) {
-      // Invalidate the used nonce immediately
+    if (providedPassword === MASTER_SECRET || providedPassword === validCurr || (validPrev && providedPassword === validPrev)) {
+      // Invalidate the used nonce immediately if nonce was used
       if (providedPassword === validCurr) {
         currentNonce = { code: generateNonce(), expiresAt: Date.now() + 180000 };
-      } else {
+      } else if (validPrev && providedPassword === validPrev) {
         previousNonce = { code: null, expiresAt: 0 };
       }
       failedAttempts.delete(clientIP);
       const token = crypto.randomBytes(32).toString('hex');
       registerSession(token, { email: AUTHORIZED_EMAIL, clientIP, userAgent: req.headers['user-agent'] || '' });
-      recordAuditEntry('LOGIN_SUCCESS_NONCE_VERIFIED', { clientIP });
+      recordAuditEntry('LOGIN_SUCCESS_VERIFIED', { clientIP });
       return sendJSON(res, { success: true, token, email: AUTHORIZED_EMAIL, clearance: 'LEVEL_1', persistent: true });
     } else {
       // Brute-force tracking
@@ -931,6 +1112,22 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, { error: 'Rate limit exceeded. Quarantined for 15 minutes.' }, 429);
       }
       return sendJSON(res, { error: 'Invalid security clearance credential.' }, 401);
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // ALL PROTECTED /api/* AND /tunnel/* ROUTES REQUIRE LEVEL 1 OPERATOR CLEARANCE
+  // ----------------------------------------------------------------------------
+  if (pathname.startsWith('/api/') || pathname.startsWith('/tunnel/')) {
+    const authHeader = req.headers['authorization'] || req.headers['x-manisoft-token'] || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const hasValidSession = isValidSession(token) || isZeroTrustBypass;
+    
+    if (!hasValidSession) {
+      return sendJSON(res, {
+        success: false,
+        error: `Unauthorized: Sovereign Clearance Required. Active account '${AUTHORIZED_EMAIL}' must be authenticated.`
+      }, 401);
     }
   }
 
@@ -1247,6 +1444,19 @@ const server = http.createServer(async (req, res) => {
 // 6. TERMINAL PTY & WEBSOCKET BRIDGE
 // ------------------------------------------------------------------------------
 server.on('upgrade', (req, socket, head) => {
+  const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const authHeader = req.headers['authorization'] || req.headers['x-manisoft-token'] || '';
+  const queryToken = urlObj.searchParams.get('token') || '';
+  const token = (queryToken || authHeader.replace(/^Bearer\s+/i, '')).trim();
+  const cfUser = req.headers['cf-access-authenticated-user-email'];
+  const isZeroTrustBypass = cfUser && cfUser.toLowerCase() === AUTHORIZED_EMAIL.toLowerCase();
+
+  if (!isValidSession(token) && !isZeroTrustBypass) {
+    socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
   // Simple RFC 6455 compliant WebSocket handshake fallback
   const key = req.headers['sec-websocket-key'];
   if (!key) {
