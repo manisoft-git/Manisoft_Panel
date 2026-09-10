@@ -724,11 +724,15 @@ Never skip pulling before modifications, and never leave completed changes unpus
     const args = [
       '-p', systemIdentity,
       '--dangerously-skip-permissions',
-      '--add-dir', PROJECTS_DIR,
-      '--effort', showThinking ? 'medium' : 'low'
+      '--add-dir', PROJECTS_DIR
     ];
     if (currentActiveModel) {
       args.push('--model', currentActiveModel);
+      if (!currentActiveModel.match(/-(high|medium|low)$/i)) {
+        args.push('--effort', showThinking ? 'medium' : 'low');
+      }
+    } else {
+      args.push('--effort', showThinking ? 'medium' : 'low');
     }
     if (conversationMode) {
       args.push('--continue');
@@ -776,11 +780,15 @@ Never skip pulling before modifications, and never leave completed changes unpus
           const retryArgs = [
             '-p', systemIdentity,
             '--dangerously-skip-permissions',
-            '--add-dir', PROJECTS_DIR,
-            '--effort', showThinking ? 'medium' : 'low'
+            '--add-dir', PROJECTS_DIR
           ];
           if (currentActiveModel) {
             retryArgs.push('--model', currentActiveModel);
+            if (!currentActiveModel.match(/-(high|medium|low)$/i)) {
+              retryArgs.push('--effort', showThinking ? 'medium' : 'low');
+            }
+          } else {
+            retryArgs.push('--effort', showThinking ? 'medium' : 'low');
           }
           child_process.execFile(agyBin, retryArgs, {
             cwd: PROJECTS_DIR,
