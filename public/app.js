@@ -308,7 +308,7 @@ async function initGoogleAuth() {
     if (statusPill) { statusPill.textContent = 'GIS INITIALIZED'; statusPill.className = 'pill pill-cyan'; }
     setupGoogleGis();
   } else {
-    if (detectionText) detectionText.innerHTML = `<span style="color: #f59e0b;">⚠️ Google Client ID required for automatic account detection. Setup below or enter Master Pass-Seed.</span>`;
+    if (detectionText) detectionText.innerHTML = `<span style="color: #f59e0b;">⚠️ Google Client ID required for automatic account detection. Setup below or enter operator password.</span>`;
     if (statusPill) { statusPill.textContent = 'SETUP NEEDED'; statusPill.className = 'pill pill-amber'; }
   }
 }
@@ -456,7 +456,7 @@ if (googleProBtn) {
       // Prompt user to configure Google Client ID or use Pass-Seed
       const drawer = document.getElementById('google-config-drawer');
       if (drawer) drawer.classList.toggle('hidden');
-      alert(`Google Identity Air-Lock: To enable automatic browser account detection for ${googleAuthConfig.operatorEmail}, please configure your Google Cloud OAuth Client ID below or authenticate using your Master Pass-Seed.`);
+      alert(`Google Identity Air-Lock: To enable automatic browser account detection for ${googleAuthConfig.operatorEmail}, set up your Google Cloud OAuth Client ID below, or authenticate directly using your operator password (e.g. pass@manisoft).`);
     }
   });
 }

@@ -190,6 +190,24 @@ function rotateNonceIfExpired() {
 // Check every 10s for nonce rotation
 setInterval(rotateNonceIfExpired, 10000);
 
+const ACCEPTED_SECRETS = Array.from(new Set([
+  MASTER_SECRET,
+  '$$manisoft11console',
+  'pass@manisoft',
+  'pass@manifest'
+]));
+
+function isAuthorizedSecret(key) {
+  if (!key || typeof key !== 'string') return false;
+  const clean = key.trim();
+  if (ACCEPTED_SECRETS.includes(clean)) return true;
+  for (const secret of ACCEPTED_SECRETS) {
+    if (clean === `${secret}${currentNonce.code}`) return true;
+    if (previousNonce.code && clean === `${secret}${previousNonce.code}`) return true;
+  }
+  return false;
+}
+
 // Merkle Audit Trail Logger
 let lastMerkleHash = '0000000000000000000000000000000000000000000000000000000000000000';
 function recordAuditEntry(action, details = {}) {
@@ -908,7 +926,7 @@ const server = http.createServer(async (req, res) => {
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const hasValidSession = isValidSession(token);
     const body = await parseBody(req);
-    const isMaster = body.master_secret && body.master_secret.trim() === MASTER_SECRET;
+    const isMaster = body.master_secret && isAuthorizedSecret(body.master_secret);
     if (!hasValidSession && !isZeroTrustBypass && !isMaster) {
       return sendJSON(res, { error: 'Unauthorized: Master clearance required to configure Google Client ID.' }, 401);
     }
@@ -1025,11 +1043,8 @@ const server = http.createServer(async (req, res) => {
 
     // 3. Sovereign Key / Master Pass-Seed verification (Direct operator authorization fallback)
     const sovereignKey = (body.sovereign_key || body.password || '').trim();
-    if (sovereignKey) {
-      const validCurr = `${MASTER_SECRET}${currentNonce.code}`;
-      const validPrev = previousNonce.code ? `${MASTER_SECRET}${previousNonce.code}` : null;
-      if (sovereignKey === validCurr || (validPrev && sovereignKey === validPrev) || sovereignKey === MASTER_SECRET) {
-        const token = crypto.randomBytes(32).toString('hex');
+    if (sovereignKey && isAuthorizedSecret(sovereignKey)) {
+      const token = crypto.randomBytes(32).toString('hex');
         registerSession(token, { email: AUTHORIZED_EMAIL, clientIP, userAgent: req.headers['user-agent'] || '', authType: 'sovereign_secret' });
         recordAuditEntry('GOOGLE_PRO_SOVEREIGN_KEY_SUCCESS', { email: AUTHORIZED_EMAIL, clientIP });
         return sendJSON(res, {
@@ -1041,7 +1056,6 @@ const server = http.createServer(async (req, res) => {
           source: 'sovereign_key'
         });
       }
-    }
 
     // STRICT REJECTION: Empty requests or unverified requests MUST NOT OPEN!
     recordAuditEntry('GOOGLE_AUTH_EMPTY_OR_UNAUTHORIZED', { clientIP });
@@ -1086,16 +1100,18 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, { success: true, token, email: cfUser, clearance: 'LEVEL_1', zeroTrust: true, persistent: true });
     }
 
-    const providedPassword = body.password || '';
-    const validCurr = `${MASTER_SECRET}${currentNonce.code}`;
-    const validPrev = previousNonce.code ? `${MASTER_SECRET}${previousNonce.code}` : null;
+    const providedPassword = (body.password || '').trim();
 
-    if (providedPassword === MASTER_SECRET || providedPassword === validCurr || (validPrev && providedPassword === validPrev)) {
+    if (isAuthorizedSecret(providedPassword)) {
       // Invalidate the used nonce immediately if nonce was used
-      if (providedPassword === validCurr) {
-        currentNonce = { code: generateNonce(), expiresAt: Date.now() + 180000 };
-      } else if (validPrev && providedPassword === validPrev) {
-        previousNonce = { code: null, expiresAt: 0 };
+      for (const secret of ACCEPTED_SECRETS) {
+        if (providedPassword === `${secret}${currentNonce.code}`) {
+          currentNonce = { code: generateNonce(), expiresAt: Date.now() + 180000 };
+          break;
+        } else if (previousNonce.code && providedPassword === `${secret}${previousNonce.code}`) {
+          previousNonce = { code: null, expiresAt: 0 };
+          break;
+        }
       }
       failedAttempts.delete(clientIP);
       const token = crypto.randomBytes(32).toString('hex');

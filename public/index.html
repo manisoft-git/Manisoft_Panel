@@ -180,7 +180,7 @@
             To enable automatic 1-tap browser account detection, link your Google Cloud OAuth 2.0 Web Client ID:
           </div>
           <input type="text" id="cfg-google-client-id" class="code-textarea" placeholder="xxxx.apps.googleusercontent.com" style="width: 100%; font-size: 11px; padding: 6px; margin-bottom: 6px; border: 1px solid var(--border-dim); background: #000; color: var(--color-neon);" autocomplete="off">
-          <input type="password" id="cfg-master-secret" class="code-textarea" placeholder="Master Secret (to authorize config update)" style="width: 100%; font-size: 11px; padding: 6px; margin-bottom: 6px; border: 1px solid var(--border-dim); background: #000; color: var(--color-neon);" autocomplete="off">
+          <input type="password" id="cfg-master-secret" class="code-textarea" placeholder="Password / Master Secret (to authorize)" style="width: 100%; font-size: 11px; padding: 6px; margin-bottom: 6px; border: 1px solid var(--border-dim); background: #000; color: var(--color-neon);" autocomplete="off">
           <div style="display: flex; gap: 6px; justify-content: flex-end;">
             <button type="button" id="btn-save-google-config" class="btn-primary-sm" style="font-size: 10px; padding: 4px 10px;">SAVE CLIENT ID</button>
           </div>
@@ -189,7 +189,7 @@
 
       <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0; color: var(--text-dim); font-size: 11px;">
         <div style="flex: 1; height: 1px; background: var(--border-dim);"></div>
-        <span>OR SOVEREIGN MASTER PASS-SEED</span>
+        <span>OR OPERATOR PASSWORD / PASSKEY</span>
         <div style="flex: 1; height: 1px; background: var(--border-dim);"></div>
       </div>
 
@@ -198,7 +198,7 @@
         <input type="text" id="sys_master_key" name="sys_master_key" style="display:none;" tabindex="-1" autocomplete="off">
 
         <div style="margin-bottom: 10px;">
-          <input type="password" id="auth-password" class="code-textarea" placeholder="Master Secret / Pass-Seed" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border-dim); background: #000; color: var(--color-neon);" required autocomplete="off">
+          <input type="password" id="auth-password" class="code-textarea" placeholder="Operator Password (e.g. pass@manisoft or $$manisoft11console)" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border-dim); background: #000; color: var(--color-neon);" required autocomplete="off">
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 11px; color: #94a3b8;">
