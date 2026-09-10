@@ -333,9 +333,9 @@ const FLEET_RENDER_SPECS = {
   },
   "aether-transport": {
     repo: "https://github.com/manisoft-git/aether-transport",
-    runtime: "docker",
-    buildCommand: "",
-    startCommand: ""
+    runtime: "python",
+    buildCommand: "pip install -r requirements.txt 2>/dev/null || true",
+    startCommand: "python3 server.py"
   },
   Manisoft_Panel: {
     repo: "https://github.com/manisoft-git/Manisoft_Panel",
