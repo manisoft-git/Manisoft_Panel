@@ -702,12 +702,23 @@ async function sendManiDialogue(promptText) {
       `;
     }
 
-    const formattedReply = escapeHtml(reply).replace(/\n/g, '<br>');
-    aiBubble.innerHTML = `${thoughtHtml}<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div><div>${formattedReply}</div>`;
+    const isSlash = promptText.trim().startsWith('/') || promptText.trim().startsWith('agy ');
+    const isCli = data.isCliCommand || isSlash;
+
+    let contentHtml = '';
+    if (isCli) {
+      contentHtml = `<pre style="background: #000; border: 1px solid var(--border-dim); border-radius: 4px; padding: 10px; overflow-x: auto; color: var(--color-neon); font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; line-height: 1.4; margin: 4px 0 0 0;">${escapeHtml(reply)}</pre>`;
+    } else {
+      contentHtml = `<div>${escapeHtml(reply).replace(/\n/g, '<br>')}</div>`;
+    }
+
+    aiBubble.innerHTML = `${thoughtHtml}<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div>${contentHtml}`;
 
     if (data.success !== false) {
       sound.success();
-      speakManiResponse(reply);
+      if (!isCli) {
+        speakManiResponse(reply);
+      }
     } else {
       sound.error();
     }
@@ -740,9 +751,18 @@ function renderTerminalNOC(containerEl) {
         <span>${isAgy ? 'SOVEREIGN AGENT // MANI AI Autonomous Fleet Engine' : 'SOVEREIGN PTY STREAM // /bin/bash'}</span>
         <span>${isAgy ? 'CAPABILITIES: Edit Projects, Full Read/Write, Git, Shell' : 'HOTSTRINGS: ;;audit, ;;push'}</span>
       </div>
-      <div id="term-out" class="terminal-output">manisoft@sovereign:~$ Mani$oft Mission Control Ready.\n${isAgy ? '[MANI AI] Sovereign agent connected at ~/MANISOFT/projects. Full fleet read/write editing active. Speak via MIC or type instructions.\n' : '[BASH] Local shell active.\n'}</div>
+      <div id="term-out" class="terminal-output">manisoft@sovereign:~$ Mani$oft Mission Control Ready.\n${isAgy ? '[MANI AI] Sovereign agent connected at ~/MANISOFT/projects. Full CLI & slash commands active (/usage, /models, /model, /help). Speak via MIC or type instructions.\n' : '[BASH] Local shell active. Full CLI available.\n'}</div>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+        <button class="pill pill-green term-chip" data-cmd="/usage" style="border-color: var(--color-neon); cursor: pointer;">📊 /usage</button>
+        <button class="pill pill-green term-chip" data-cmd="/models" style="border-color: var(--color-neon); cursor: pointer;">🤖 /models</button>
+        <button class="pill pill-green term-chip" data-cmd="/model" style="border-color: var(--color-neon); cursor: pointer;">🔍 /model</button>
+        <button class="pill pill-green term-chip" data-cmd="/help" style="border-color: var(--color-neon); cursor: pointer;">❓ /help</button>
+        <button class="pill pill-green term-chip" data-cmd="/skills" style="border-color: var(--color-neon); cursor: pointer;">⚡ /skills</button>
+        <button class="pill pill-cyan term-chip" data-cmd="agy models" style="cursor: pointer;">💻 agy models</button>
+        <button class="pill pill-cyan term-chip" data-cmd="git status -s" style="cursor: pointer;">🐙 git status</button>
+      </div>
       <div class="terminal-input-row">
-        <input type="text" id="term-input" placeholder="${isAgy ? 'Instruct MANI AI to edit code, inspect fleet, or tap MIC to speak...' : 'Type shell command or slash action (/boost, /parallel)...'}" autofocus>
+        <input type="text" id="term-input" placeholder="${isAgy ? 'Type slash command (/usage, /models), agy command, or natural language...' : 'Type shell command or slash action (/usage, /models, agy models)...'}" autofocus>
         <button id="btn-term-send" class="btn-primary-sm">SEND</button>
       </div>
     </div>
@@ -789,58 +809,64 @@ function renderTerminalNOC(containerEl) {
     // Client-side WASM Secret Sanitizer
     let sanitized = rawVal.replace(/(AIza[0-9A-Za-z-_]{35}|sk-[a-zA-Z0-9]{32,}|ghp_[a-zA-Z0-9]{36})/g, '[REDACTED_SECRET]');
 
-    const promptIsAgy = terminalMode === 'antigravity' || sanitized.startsWith('/') || sanitized.startsWith('mani ') || sanitized.startsWith('agy ');
-    const promptPrefix = promptIsAgy ? 'operator@mani-ai:~$ ' : 'manisoft@sovereign:~$ ';
+    const isSlash = sanitized.startsWith('/');
+    const isAgyDirect = sanitized.startsWith('agy ') || sanitized === 'agy';
+    const isBashShell = terminalMode === 'bash';
+
+    const promptPrefix = isBashShell ? 'manisoft@sovereign:~$ ' : 'operator@mani-ai:~$ ';
     termOut.textContent += `\n${promptPrefix}${sanitized}\n`;
     termInput.value = '';
 
-    if (promptIsAgy) {
-      termOut.textContent += `[MANI AI // REASONING & EXECUTING...]\n`;
-      termOut.scrollTop = termOut.scrollHeight;
+    termOut.textContent += `[EXECUTING CLI COMMAND...]\n`;
+    termOut.scrollTop = termOut.scrollHeight;
 
-      try {
-        const cleanPrompt = sanitized.replace(/^(mani|agy)\s+/i, '');
-        const res = await fetch('/api/mcp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'ask_mani', params: { prompt: cleanPrompt, showThinking: thinkingEnabled } })
-        });
-        const data = await res.json();
-        termOut.textContent = termOut.textContent.replace(`[MANI AI // REASONING & EXECUTING...]\n`, '');
-        if (data.result && (data.result.output || data.result.reply)) {
-          if (data.result.thought && thinkingEnabled) {
-            termOut.textContent += `[THINKING PROCESS]\n${data.result.thought}\n[/THINKING PROCESS]\n\n`;
+    try {
+      const res = await fetch('/api/mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          method: 'dispatch_terminal_command',
+          params: {
+            command: sanitized,
+            mode: terminalMode,
+            showThinking: thinkingEnabled
           }
-          const reply = data.result.output || data.result.reply;
-          termOut.textContent += `🤖 MANI AI:\n${reply}\n\n`;
-          speakManiResponse(reply);
-        } else if (data.result && data.result.error) {
-          termOut.textContent += `[-] MANI AI Error: ${data.result.error}\n`;
-        }
-      } catch (err) {
-        termOut.textContent = termOut.textContent.replace(`[MANI AI // REASONING & EXECUTING...]\n`, '');
-        termOut.textContent += `[-] MANI AI Dispatch failed: ${err.message}\n`;
+        })
+      });
+      const data = await res.json();
+      termOut.textContent = termOut.textContent.replace(`[EXECUTING CLI COMMAND...]\n`, '');
+
+      const result = data.result || {};
+      if (result.thought && thinkingEnabled) {
+        termOut.textContent += `[THINKING PROCESS]\n${result.thought}\n[/THINKING PROCESS]\n\n`;
       }
-    } else {
-      // Dispatch to bash shell
-      try {
-        const res = await fetch('/api/mcp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'dispatch_terminal_command', params: { command: sanitized, mode: 'bash' } })
-        });
-        const data = await res.json();
-        if (data.result && data.result.output) {
-          termOut.textContent += data.result.output;
-        } else if (data.result && data.result.error) {
-          termOut.textContent += `[-] Error: ${data.result.error}\n`;
+      if (result.output) {
+        if (result.isCliCommand || isSlash || isAgyDirect) {
+          termOut.textContent += `${result.output}\n`;
+        } else {
+          termOut.textContent += `🤖 MANI AI:\n${result.output}\n\n`;
+          speakManiResponse(result.output);
         }
-      } catch (err) {
-        termOut.textContent += `[-] Dispatch failed: ${err.message}\n`;
+      } else if (result.error) {
+        termOut.textContent += `[-] Error: ${result.error}\n`;
       }
+    } catch (err) {
+      termOut.textContent = termOut.textContent.replace(`[EXECUTING CLI COMMAND...]\n`, '');
+      termOut.textContent += `[-] Dispatch failed: ${err.message}\n`;
     }
     termOut.scrollTop = termOut.scrollHeight;
   };
+
+  containerEl.querySelectorAll('.term-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      sound.tap();
+      const cmd = chip.dataset.cmd;
+      if (cmd && termInput) {
+        termInput.value = cmd;
+        executeCmd();
+      }
+    });
+  });
 
   if (termSend) termSend.addEventListener('click', executeCmd);
   if (termInput) {

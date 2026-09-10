@@ -558,11 +558,74 @@ const mimeTypes = {
   '.ico': 'image/x-icon'
 };
 
+let currentActiveModel = 'gemini-3.8-flash-high';
+
 // MANI AI Subsystem Bridge (Autonomous Agent Engine with Full Read/Write Fleet Permissions & Thought Streaming)
 async function callManiAI(prompt, conversationMode = true, showThinking = true) {
   return new Promise((resolve) => {
     const agyBin = fs.existsSync('/root/.local/bin/agy') ? '/root/.local/bin/agy' : 'agy';
     const cleanPrompt = (prompt || 'Hello MANI AI').trim();
+
+    // Native Slash Command & CLI Subcommand Dispatch
+    if (cleanPrompt.startsWith('/')) {
+      const parts = cleanPrompt.trim().split(/\s+/);
+      const slashCmd = parts[0].toLowerCase();
+
+      // /models -> list all available models
+      if (slashCmd === '/models') {
+        child_process.execFile(agyBin, ['models'], {
+          cwd: PROJECTS_DIR,
+          timeout: 45000,
+          encoding: 'utf8',
+          env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
+        }, (err, stdout, stderr) => {
+          const out = (stdout || stderr || '').trim();
+          resolve({
+            success: !err,
+            output: out || 'No models returned.',
+            thought: '',
+            raw: out,
+            isCliCommand: true
+          });
+        });
+        return;
+      }
+
+      // /model <target> -> switch active model
+      if (slashCmd === '/model' && parts.length > 1) {
+        currentActiveModel = parts[1].trim();
+        resolve({
+          success: true,
+          output: `[✓] Switched MANI AI active model to: ${currentActiveModel}`,
+          thought: '',
+          isCliCommand: true
+        });
+        return;
+      }
+
+      // Any other slash command (/usage, /quota, /model, /help, /skills, /agents, /effort, etc.)
+      child_process.execFile(agyBin, [
+        '-p', cleanPrompt,
+        '--dangerously-skip-permissions',
+        '--add-dir', PROJECTS_DIR
+      ], {
+        cwd: PROJECTS_DIR,
+        timeout: 60000,
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
+      }, (err, stdout, stderr) => {
+        const out = (stdout || stderr || '').trim();
+        resolve({
+          success: !err,
+          output: out || (err ? err.message : 'Command executed.'),
+          thought: '',
+          raw: out,
+          isCliCommand: true
+        });
+      });
+      return;
+    }
+
     const thinkingInstruction = showThinking
       ? '\n[CRITICAL INSTRUCTION: You MUST begin your reply with your step-by-step reasoning, fleet code inspection, and execution plan enclosed in <thought>...</thought> tags. After the closing </thought> tag, provide your direct response to Manifest.]'
       : '';
@@ -579,6 +642,9 @@ Never skip pulling before modifications, and never leave completed changes unpus
       '--add-dir', PROJECTS_DIR,
       '--effort', showThinking ? 'medium' : 'low'
     ];
+    if (currentActiveModel) {
+      args.push('--model', currentActiveModel);
+    }
     if (conversationMode) {
       args.push('--continue');
     }
@@ -622,12 +688,16 @@ Never skip pulling before modifications, and never leave completed changes unpus
       if (err) {
         // If --continue failed (e.g. no active session existed yet), retry cleanly without --continue
         if (conversationMode) {
-          child_process.execFile(agyBin, [
+          const retryArgs = [
             '-p', systemIdentity,
             '--dangerously-skip-permissions',
             '--add-dir', PROJECTS_DIR,
             '--effort', showThinking ? 'medium' : 'low'
-          ], {
+          ];
+          if (currentActiveModel) {
+            retryArgs.push('--model', currentActiveModel);
+          }
+          child_process.execFile(agyBin, retryArgs, {
             cwd: PROJECTS_DIR,
             timeout: 180000,
             encoding: 'utf8',
@@ -1082,22 +1152,65 @@ const server = http.createServer(async (req, res) => {
       result = { output: aiRes.output, thought: aiRes.thought, success: aiRes.success, error: aiRes.error };
     } else if (method === 'dispatch_terminal_command') {
       try {
-        const cmd = params.command || 'echo ok';
-        // Smart routing: if command is a MANI AI command or slash prompt, delegate to MANI AI
-        if (cmd.startsWith('mani ') || cmd.startsWith('agy ') || cmd.startsWith('/') || params.mode === 'mani' || params.mode === 'antigravity') {
-          const cleanPrompt = cmd.replace(/^(mani|agy)\s+/i, '');
-          const aiRes = await callManiAI(cleanPrompt, true);
-          result = { output: aiRes.output, success: aiRes.success, error: aiRes.error };
-        } else {
-          // HITL air-lock check
-          if (cmd.match(/rm -rf|drop database|mkfs|kill -9 1/i)) {
+        const cmd = (params.command || 'echo ok').trim();
+
+        // 1. If command is a slash command (/usage, /models, /model, /help, /skills, etc.)
+        if (cmd.startsWith('/')) {
+          const aiRes = await callManiAI(cmd, true, false);
+          result = { output: aiRes.output, isCliCommand: true, success: aiRes.success, error: aiRes.error };
+        }
+        // 2. If command is an explicit agy CLI command (e.g. "agy models", "agy agents", "agy mcp", "agy --help")
+        else if (cmd.startsWith('agy ') || cmd === 'agy') {
+          const output = child_process.execSync(cmd, {
+            cwd: PROJECTS_DIR,
+            timeout: 60000,
+            encoding: 'utf8',
+            env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, PROJECTS_DIR }
+          }).toString();
+          result = { output: output.trim(), isCliCommand: true, success: true };
+        }
+        // 3. If explicit mani prompt prefix
+        else if (cmd.startsWith('mani ')) {
+          const cleanPrompt = cmd.replace(/^mani\s+/i, '');
+          const aiRes = await callManiAI(cleanPrompt, true, params.showThinking !== false);
+          result = { output: aiRes.output, thought: aiRes.thought, success: aiRes.success, error: aiRes.error };
+        }
+        // 4. In antigravity mode
+        else if (params.mode === 'antigravity') {
+          const isShellCmd = cmd.startsWith('$ ') || cmd.match(/^(git|ls|cat|curl|pwd|which|ps|top|kill|mkdir|rm|cp|mv|touch|grep|find|sed|awk|echo|node|npm|npx|python|python3|cargo|rustc|bash|sh|df|du|chmod|chown)\b/);
+          if (isShellCmd) {
+            const shellCmd = cmd.startsWith('$ ') ? cmd.slice(2) : cmd;
+            if (shellCmd.match(/drop database|mkfs|kill -9 1/i)) {
+              return sendJSON(res, { error: 'BLOCKED_BY_HITL_AIRLOCK', command: shellCmd }, 403);
+            }
+            const output = child_process.execSync(shellCmd, {
+              cwd: PROJECTS_DIR,
+              timeout: 30000,
+              encoding: 'utf8',
+              env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, PROJECTS_DIR }
+            }).toString();
+            result = { output: output.trim(), isCliCommand: true, success: true };
+          } else {
+            const aiRes = await callManiAI(cmd, true, params.showThinking !== false);
+            result = { output: aiRes.output, thought: aiRes.thought, success: aiRes.success, error: aiRes.error };
+          }
+        }
+        // 5. Bash shell mode
+        else {
+          if (cmd.match(/rm -rf \/|drop database|mkfs|kill -9 1/i)) {
             return sendJSON(res, { error: 'BLOCKED_BY_HITL_AIRLOCK', command: cmd }, 403);
           }
-          const output = child_process.execSync(cmd, { timeout: 10000 }).toString();
-          result = { output };
+          const output = child_process.execSync(cmd, {
+            cwd: PROJECTS_DIR,
+            timeout: 30000,
+            encoding: 'utf8',
+            env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, PROJECTS_DIR }
+          }).toString();
+          result = { output: output.trim(), isCliCommand: true, success: true };
         }
       } catch (err) {
-        result = { error: err.message };
+        const errOut = (err.stdout ? err.stdout.toString() : '') + (err.stderr ? err.stderr.toString() : '');
+        result = { error: errOut.trim() || err.message, success: false };
       }
     }
     return sendJSON(res, { jsonrpc: '2.0', id: body.id || 1, result });
