@@ -646,9 +646,56 @@ const mimeTypes = {
 let currentActiveModel = 'gemini-3.8-flash-high';
 
 // MANI AI Subsystem Bridge (Autonomous Agent Engine with Full Read/Write Fleet Permissions & Thought Streaming)
+function getAgyBinary() {
+  const candidates = [
+    '/usr/local/bin/agy',
+    '/root/.local/bin/agy',
+    '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/root/.local/bin/agy',
+    '/data/data/com.termux/files/home/.local/bin/agy',
+    '/data/data/com.termux/files/usr/bin/agy',
+    '/usr/bin/agy'
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) {
+        try {
+          fs.accessSync(c, fs.constants.X_OK);
+          return c;
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
+  return 'agy';
+}
+
+function getCliEnv() {
+  const extraPaths = [
+    '/root/.local/bin',
+    '/root/.gemini/antigravity-cli/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/data/data/com.termux/files/home/.local/bin',
+    '/data/data/com.termux/files/usr/bin'
+  ];
+  const cur = process.env.PATH || '';
+  const parts = cur.split(':').filter(Boolean);
+  for (const p of extraPaths) {
+    if (!parts.includes(p)) parts.unshift(p);
+  }
+  return {
+    ...process.env,
+    PATH: parts.join(':'),
+    CI: 'true',
+    NONINTERACTIVE: '1',
+    PROJECTS_DIR: fs.existsSync(PROJECTS_DIR) ? PROJECTS_DIR : __dirname
+  };
+}
+
 async function callManiAI(prompt, conversationMode = true, showThinking = true) {
   return new Promise((resolve) => {
-    const agyBin = fs.existsSync('/root/.local/bin/agy') ? '/root/.local/bin/agy' : 'agy';
+    const agyBin = getAgyBinary();
+    const cliEnv = getCliEnv();
     const cleanPrompt = (prompt || 'Hello MANI AI').trim();
 
     // Native Slash Command & CLI Subcommand Dispatch
@@ -662,12 +709,12 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
           cwd: PROJECTS_DIR,
           timeout: 45000,
           encoding: 'utf8',
-          env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
+          env: cliEnv
         }, (err, stdout, stderr) => {
           const out = (stdout || stderr || '').trim();
           resolve({
             success: !err,
-            output: out || 'No models returned.',
+            output: out || (err ? `[!] Model lookup failed: ${err.message}` : 'No models returned.'),
             thought: '',
             raw: out,
             isCliCommand: true
@@ -697,7 +744,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
         cwd: PROJECTS_DIR,
         timeout: 60000,
         encoding: 'utf8',
-        env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
+        env: cliEnv
       }, (err, stdout, stderr) => {
         const out = (stdout || stderr || '').trim();
         resolve({
@@ -772,7 +819,7 @@ Never skip pulling before modifications, and never leave completed changes unpus
       timeout: 180000,
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
-      env: { ...process.env, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
+      env: cliEnv
     }, (err, stdout, stderr) => {
       if (err) {
         // If --continue failed (e.g. no active session existed yet), retry cleanly without --continue
@@ -795,16 +842,19 @@ Never skip pulling before modifications, and never leave completed changes unpus
             timeout: 180000,
             encoding: 'utf8',
             maxBuffer: 10 * 1024 * 1024,
-            env: { ...process.env, CI: 'true', NONINTERACTIVE: '1', PROJECTS_DIR }
+            env: cliEnv
           }, (retryErr, retryStdout, retryStderr) => {
             const outText = (retryStdout || '') + (retryStderr || '');
             if (retryErr) {
               const parsed = parseThoughtAndOutput(outText);
+              const errMsg = retryErr.code === 'ENOENT'
+                ? `[!] MANI AI binary (${agyBin}) not found or unexecutable in environment path (ENOENT).`
+                : (retryErr.message || 'MANI AI execution failed');
               resolve({
                 success: false,
-                output: parsed.output || retryErr.message || 'MANI AI execution failed',
+                output: parsed.output || errMsg,
                 thought: parsed.thought,
-                error: retryErr.message,
+                error: errMsg,
                 latencyMs: Date.now() - startTime
               });
             } else {
@@ -823,11 +873,14 @@ Never skip pulling before modifications, and never leave completed changes unpus
         }
         const outText = (stdout || '') + (stderr || '');
         const parsed = parseThoughtAndOutput(outText);
+        const errMsg = err.code === 'ENOENT'
+          ? `[!] MANI AI binary (${agyBin}) not found or unexecutable in environment path (ENOENT).`
+          : (err.message || 'MANI AI execution failed');
         resolve({
           success: false,
-          output: parsed.output || err.message || 'MANI AI execution failed',
+          output: parsed.output || errMsg,
           thought: parsed.thought,
-          error: err.message,
+          error: errMsg,
           latencyMs: Date.now() - startTime
         });
       } else {
@@ -1372,11 +1425,12 @@ const server = http.createServer(async (req, res) => {
         }
         // 2. If command is an explicit agy CLI command (e.g. "agy models", "agy agents", "agy mcp", "agy --help")
         else if (cmd.startsWith('agy ') || cmd === 'agy') {
-          const output = child_process.execSync(cmd, {
+          const resolvedCmd = cmd.replace(/^agy\b/, getAgyBinary());
+          const output = child_process.execSync(resolvedCmd, {
             cwd: PROJECTS_DIR,
             timeout: 60000,
             encoding: 'utf8',
-            env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, PROJECTS_DIR }
+            env: getCliEnv()
           }).toString();
           result = { output: output.trim(), isCliCommand: true, success: true };
         }
@@ -1398,7 +1452,7 @@ const server = http.createServer(async (req, res) => {
               cwd: PROJECTS_DIR,
               timeout: 30000,
               encoding: 'utf8',
-              env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, PROJECTS_DIR }
+              env: getCliEnv()
             }).toString();
             result = { output: output.trim(), isCliCommand: true, success: true };
           } else {
@@ -1415,7 +1469,7 @@ const server = http.createServer(async (req, res) => {
             cwd: PROJECTS_DIR,
             timeout: 30000,
             encoding: 'utf8',
-            env: { ...process.env, PATH: `/root/.local/bin:${process.env.PATH}`, PROJECTS_DIR }
+            env: getCliEnv()
           }).toString();
           result = { output: output.trim(), isCliCommand: true, success: true };
         }
