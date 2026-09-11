@@ -34,6 +34,9 @@ const SNAPSHOT_DIR = path.join(__dirname, '.manisoft_snapshots');
 const LEDGER_FILE = path.join(__dirname, '.manisoft_ledger.jsonl');
 const FLEET_JSON = path.join(__dirname, 'fleet.json');
 const PROJECTS_DIR = path.resolve(__dirname, '..');
+// 24/7 Cloud AGY Bridge — set CLOUD_AGY_URL to your GCP VM (e.g. http://34.x.x.x:3000)
+// When set, Mani AI routes through the cloud VM's /api/mani endpoint instead of local agy
+const CLOUD_AGY_URL = (process.env.CLOUD_AGY_URL || '').trim().replace(/\/$/, '');
 
 // Ensure necessary directories exist
 [PUBLIC_DIR, SNAPSHOT_DIR, path.join(SNAPSHOT_DIR, 'decommissioned')].forEach(d => {
@@ -801,7 +804,47 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
     const runCwd = fs.existsSync(PROJECTS_DIR) ? PROJECTS_DIR : __dirname;
     const cleanPrompt = (prompt || 'Hello MANI AI').trim();
 
-    // Cloud fallback: if agy CLI is unavailable (e.g. Render/Railway), call Gemini API directly
+    // ── Priority 1: 24/7 Cloud AGY Bridge ────────────────────────────────────
+    // If CLOUD_AGY_URL is set (pointing to a GCP VM), delegate to it so Mani AI
+    // works even when this phone/device is the one sending the request offline.
+    // The cloud VM runs its own agy CLI with full fleet permissions.
+    if (CLOUD_AGY_URL) {
+      const https_http = CLOUD_AGY_URL.startsWith('https') ? require('https') : require('http');
+      const body = JSON.stringify({ prompt: cleanPrompt, thinking: showThinking });
+      const urlObj = new URL(`${CLOUD_AGY_URL}/api/mani`);
+      const reqOpts = {
+        hostname: urlObj.hostname,
+        port: urlObj.port || (CLOUD_AGY_URL.startsWith('https') ? 443 : 80),
+        path: urlObj.pathname,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        timeout: 120000
+      };
+      const cloudReq = https_http.request(reqOpts, (resp) => {
+        let data = '';
+        resp.on('data', c => data += c);
+        resp.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            resolve({ success: true, output: json.output || json.result || data, thought: json.thought || '' });
+          } catch (e) {
+            resolve({ success: true, output: data, thought: '' });
+          }
+        });
+      });
+      cloudReq.on('error', (err) => {
+        // Cloud VM unreachable — fall through to local agy or Gemini direct
+        console.warn(`[MANI AI] Cloud AGY unreachable (${err.message}), falling back to local...`);
+        callGeminiDirect(cleanPrompt).then(resolve);
+      });
+      cloudReq.on('timeout', () => { cloudReq.destroy(); });
+      cloudReq.write(body);
+      cloudReq.end();
+      return;
+    }
+
+    // ── Priority 2: Local agy CLI (phone is on, Termux running) ──────────────
+    // If agy CLI is unavailable (e.g. deployed to Render/Railway), call Gemini API directly
     if (!agyAvailable()) {
       callGeminiDirect(cleanPrompt).then(resolve);
       return;
