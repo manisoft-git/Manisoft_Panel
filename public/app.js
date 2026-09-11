@@ -649,17 +649,31 @@ function escapeHtml(str) {
   });
 }
 
-// Brand substitution: replace Gemini → MANI AI, Google → MANISOFT in AI output
+// Brand substitution: replace Gemini → MANI AI, Google → MANISOFT in AI output.
+// URLs (http/https) are preserved exactly as-is so links stay functional.
 function brandify(text) {
   if (!text) return text;
-  return text
-    // Google DeepMind / Google AI → MANISOFT AI
-    .replace(/Google\s+DeepMind/gi, 'MANISOFT AI')
-    .replace(/Google\s+AI/gi, 'MANISOFT AI')
-    // All Gemini mentions → MANI AI (including model strings like gemini-3.6-flash)
-    .replace(/gemini/gi, 'MANI AI')
-    // All Google mentions → MANISOFT
-    .replace(/\bGoogle\b/gi, 'MANISOFT');
+
+  // Tokenise: split into URL segments and text segments
+  const URL_RE = /https?:\/\/[^\s<>"')]+/g;
+  const result = [];
+  let last = 0, m;
+  while ((m = URL_RE.exec(text)) !== null) {
+    if (m.index > last) result.push({ t: 'text', v: text.slice(last, m.index) });
+    result.push({ t: 'url', v: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) result.push({ t: 'text', v: text.slice(last) });
+
+  return result.map(seg => {
+    if (seg.t === 'url') return seg.v; // leave URLs untouched
+    return seg.v
+      .replace(/Google\s+DeepMind/gi, 'MANISOFT AI')
+      .replace(/Google\s+AI/gi, 'MANISOFT AI')
+      .replace(/gemini/gi, 'MANI AI')
+      .replace(/\bGoogle\b/gi, 'MANISOFT')
+      .replace(/googleapis/gi, 'manisoftapis'); // catch domain leaks in non-URL text
+  }).join('');
 }
 
 

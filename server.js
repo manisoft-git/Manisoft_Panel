@@ -802,10 +802,29 @@ async function callGeminiDirect(prompt, modelOverride = null) {
       req.write(body);
       req.end();
     });
-    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || result?.error?.message || 'No response.';
+    // Extract text or clean up any error message from the API
+    let text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      const apiErr = result?.error?.message || 'No response.';
+      // Sanitize: strip raw googleapis URLs, replace brand names for clean UX
+      const cleanErr = apiErr
+        .replace(/https?:\/\/[^\s<>"')]+/g, '') // strip raw URLs entirely
+        .replace(/generativelanguage\.googleapis\.com\/[^\s,]*/g, '') // strip metric paths
+        .replace(/gemini/gi, 'MANI AI')
+        .replace(/google/gi, 'MANISOFT')
+        .replace(/\s{2,}/g, ' ').trim();
+      // Detect quota / rate-limit errors specifically
+      if (/quota|rate.?limit|429|resource.?exhausted/i.test(apiErr)) {
+        const retryMatch = apiErr.match(/retry in ([\d.]+)s/i);
+        const retryHint = retryMatch ? ` Please retry in ${Math.ceil(parseFloat(retryMatch[1]))}s.` : '';
+        text = `⚠️ MANI AI rate limit reached on your current API plan.${retryHint}\n\nTo increase limits, upgrade your MANISOFT AI plan or switch to a higher-quota API key in the panel settings.`;
+      } else {
+        text = `[!] MANI AI error: ${cleanErr}`;
+      }
+    }
     return { success: true, output: text, thought: '', raw: text };
   } catch (e) {
-    return { success: false, output: `[!] Gemini API error: ${e.message}`, thought: '' };
+    return { success: false, output: `[!] MANI AI connection error: ${e.message}`, thought: '' };
   }
 }
 
