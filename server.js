@@ -649,7 +649,11 @@ let currentActiveModel = 'gemini-3.8-flash-high';
 function getAgyBinary() {
   const candidates = [
     '/usr/local/bin/agy',
+    '/usr/bin/agy',
     '/root/.local/bin/agy',
+    '/root/.gemini/antigravity-cli/bin/agy',
+    '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/usr/local/bin/agy',
+    '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/usr/bin/agy',
     '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/root/.local/bin/agy'
   ];
   for (const c of candidates) {
@@ -658,10 +662,28 @@ function getAgyBinary() {
         try {
           fs.accessSync(c, fs.constants.X_OK);
           return c;
-        } catch (e) {}
+        } catch (e) {
+          try {
+            fs.chmodSync(c, 0o755);
+            return c;
+          } catch (chmodErr) {}
+        }
       }
     } catch (e) {}
   }
+  // Dynamic lookup via which
+  try {
+    const whichOut = child_process.execSync('which agy 2>/dev/null', {
+      encoding: 'utf8',
+      env: getCliEnv()
+    }).trim();
+    if (whichOut && fs.existsSync(whichOut)) {
+      try {
+        fs.accessSync(whichOut, fs.constants.X_OK);
+        return whichOut;
+      } catch (e) {}
+    }
+  } catch (e) {}
   return '/usr/local/bin/agy';
 }
 
@@ -688,6 +710,8 @@ function getCliEnv() {
   }
   return {
     ...process.env,
+    HOME: process.env.HOME || '/root',
+    USER: process.env.USER || 'root',
     PATH: full.join(':'),
     CI: 'true',
     NONINTERACTIVE: '1',
@@ -699,6 +723,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
   return new Promise((resolve) => {
     const agyBin = getAgyBinary();
     const cliEnv = getCliEnv();
+    const runCwd = fs.existsSync(PROJECTS_DIR) ? PROJECTS_DIR : __dirname;
     const cleanPrompt = (prompt || 'Hello MANI AI').trim();
 
     // Native Slash Command & CLI Subcommand Dispatch
@@ -709,7 +734,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
       // /models -> list all available models
       if (slashCmd === '/models') {
         child_process.execFile(agyBin, ['models'], {
-          cwd: PROJECTS_DIR,
+          cwd: runCwd,
           timeout: 45000,
           encoding: 'utf8',
           env: cliEnv
@@ -742,9 +767,9 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
       child_process.execFile(agyBin, [
         '-p', cleanPrompt,
         '--dangerously-skip-permissions',
-        '--add-dir', PROJECTS_DIR
+        '--add-dir', runCwd
       ], {
-        cwd: PROJECTS_DIR,
+        cwd: runCwd,
         timeout: 60000,
         encoding: 'utf8',
         env: cliEnv
@@ -769,12 +794,12 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
 1. BEFORE TOUCHING, EDITING, OR CREATING FILES in any repository, you MUST ALWAYS run 'git pull --rebase origin <branch>' (or 'git pull origin main') on that repository to fetch and integrate the latest changes.
 2. AFTER ANY CODE MODIFICATIONS OR FILE CHANGES, you MUST IMMEDIATELY stage the modified files, commit them with a concise descriptive message, and run 'git push origin <branch>' to push to remote GitHub.
 Never skip pulling before modifications, and never leave completed changes unpushed.]`;
-    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${PROJECTS_DIR} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]${gitProtocolInstruction}${thinkingInstruction}\n\n${cleanPrompt}`;
+    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${runCwd} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]${gitProtocolInstruction}${thinkingInstruction}\n\n${cleanPrompt}`;
 
     const args = [
       '-p', systemIdentity,
       '--dangerously-skip-permissions',
-      '--add-dir', PROJECTS_DIR
+      '--add-dir', runCwd
     ];
     if (currentActiveModel) {
       args.push('--model', currentActiveModel);
@@ -818,7 +843,7 @@ Never skip pulling before modifications, and never leave completed changes unpus
 
     const startTime = Date.now();
     child_process.execFile(agyBin, args, {
-      cwd: PROJECTS_DIR,
+      cwd: runCwd,
       timeout: 180000,
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
@@ -830,7 +855,7 @@ Never skip pulling before modifications, and never leave completed changes unpus
           const retryArgs = [
             '-p', systemIdentity,
             '--dangerously-skip-permissions',
-            '--add-dir', PROJECTS_DIR
+            '--add-dir', runCwd
           ];
           if (currentActiveModel) {
             retryArgs.push('--model', currentActiveModel);
@@ -841,7 +866,7 @@ Never skip pulling before modifications, and never leave completed changes unpus
             retryArgs.push('--effort', showThinking ? 'medium' : 'low');
           }
           child_process.execFile(agyBin, retryArgs, {
-            cwd: PROJECTS_DIR,
+            cwd: runCwd,
             timeout: 180000,
             encoding: 'utf8',
             maxBuffer: 10 * 1024 * 1024,
@@ -1420,6 +1445,7 @@ const server = http.createServer(async (req, res) => {
     } else if (method === 'dispatch_terminal_command') {
       try {
         const cmd = (params.command || 'echo ok').trim();
+        const runCwd = fs.existsSync(PROJECTS_DIR) ? PROJECTS_DIR : __dirname;
 
         // 1. If command is a slash command (/usage, /models, /model, /help, /skills, etc.)
         if (cmd.startsWith('/')) {
@@ -1430,7 +1456,7 @@ const server = http.createServer(async (req, res) => {
         else if (cmd.startsWith('agy ') || cmd === 'agy') {
           const resolvedCmd = cmd.replace(/^agy\b/, getAgyBinary());
           const output = child_process.execSync(resolvedCmd, {
-            cwd: PROJECTS_DIR,
+            cwd: runCwd,
             timeout: 60000,
             encoding: 'utf8',
             env: getCliEnv()
@@ -1452,7 +1478,7 @@ const server = http.createServer(async (req, res) => {
               return sendJSON(res, { error: 'BLOCKED_BY_HITL_AIRLOCK', command: shellCmd }, 403);
             }
             const output = child_process.execSync(shellCmd, {
-              cwd: PROJECTS_DIR,
+              cwd: runCwd,
               timeout: 30000,
               encoding: 'utf8',
               env: getCliEnv()
@@ -1469,7 +1495,7 @@ const server = http.createServer(async (req, res) => {
             return sendJSON(res, { error: 'BLOCKED_BY_HITL_AIRLOCK', command: cmd }, 403);
           }
           const output = child_process.execSync(cmd, {
-            cwd: PROJECTS_DIR,
+            cwd: runCwd,
             timeout: 30000,
             encoding: 'utf8',
             env: getCliEnv()
