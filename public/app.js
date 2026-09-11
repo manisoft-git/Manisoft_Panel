@@ -676,6 +676,51 @@ function openManiModal(initialPrompt = '') {
       }
       commInput.focus();
     }
+    // Populate model selector once (if still showing loading placeholder)
+    const modelSelect = document.getElementById('comm-model-select');
+    if (modelSelect && modelSelect.options.length === 1 && modelSelect.options[0].value === '') {
+      fetch('/api/models')
+        .then(r => r.json())
+        .then(data => {
+          if (!data.models || !data.models.length) return;
+          modelSelect.innerHTML = '';
+          // Group: non-deprecated first, then deprecated
+          const active = data.models.filter(m => !m.deprecated);
+          const deprecated = data.models.filter(m => m.deprecated);
+          if (active.length) {
+            const g1 = document.createElement('optgroup');
+            g1.label = '── Active Models ──';
+            active.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m.name;
+              opt.textContent = m.displayName || m.name;
+              opt.title = m.description || '';
+              g1.appendChild(opt);
+            });
+            modelSelect.appendChild(g1);
+          }
+          if (deprecated.length) {
+            const g2 = document.createElement('optgroup');
+            g2.label = '── Deprecated ──';
+            deprecated.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m.name;
+              opt.textContent = `⚠ ${m.displayName || m.name}`;
+              opt.title = m.description || '';
+              g2.appendChild(opt);
+            });
+            modelSelect.appendChild(g2);
+          }
+          // Pre-select the current default
+          const defaultModel = 'gemini-3.6-flash';
+          for (const opt of modelSelect.options) {
+            if (opt.value === defaultModel) { opt.selected = true; break; }
+          }
+        })
+        .catch(() => {
+          modelSelect.innerHTML = '<option value="">⚡ Default model</option>';
+        });
+    }
   }
 }
 const openAntigravityModal = openManiModal;
@@ -813,18 +858,22 @@ async function sendManiDialogue(promptText) {
   // Append AI thinking bubble
   const aiBubble = document.createElement('div');
   aiBubble.className = 'comm-bubble comm-ai';
-  aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div><div class="thinking-text" style="color: var(--text-dim); font-style: italic;">Reasoning & executing prompt...</div>`;
   stream.appendChild(aiBubble);
   stream.scrollTop = stream.scrollHeight;
 
   const statusText = document.getElementById('comm-status-text');
   if (statusText) statusText.textContent = 'MANI AI is reasoning & executing...';
 
+  const selectedModel = (document.getElementById('comm-model-select')?.value || '').trim() || null;
+  const modelLabel = selectedModel || 'MANI AI';
+
+  aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 ${escapeHtml(modelLabel)}:</div><div class="thinking-text" style="color: var(--text-dim); font-style: italic;">Reasoning &amp; executing prompt...</div>`;
+
   try {
     const res = await fetch('/api/mani/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptText, continue: true, showThinking: thinkingEnabled })
+      body: JSON.stringify({ prompt: promptText, continue: true, showThinking: thinkingEnabled, model: selectedModel })
     });
     const data = await res.json();
     const reply = data.output || data.reply || data.error || 'No response produced.';

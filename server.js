@@ -766,7 +766,7 @@ function agyAvailable() {
 }
 
 // Direct Gemini API fallback for cloud environments where agy CLI isn't installed
-async function callGeminiDirect(prompt) {
+async function callGeminiDirect(prompt, modelOverride = null) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
   if (!apiKey) {
     return { success: false, output: '[!] MANI AI unavailable: no GEMINI_API_KEY set and agy CLI not found. Set GEMINI_API_KEY in environment.', thought: '' };
@@ -784,7 +784,7 @@ async function callGeminiDirect(prompt) {
       'gemini-2.5-flash':      'gemini-3.6-flash',
       'gemini-2.0-flash':      'gemini-3.6-flash',
     };
-    const rawModel = currentActiveModel || 'gemini-3.6-flash';
+    const rawModel = modelOverride || currentActiveModel || 'gemini-3.6-flash';
     const model = MODEL_MAP[rawModel] || rawModel;
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
@@ -809,7 +809,7 @@ async function callGeminiDirect(prompt) {
   }
 }
 
-async function callManiAI(prompt, conversationMode = true, showThinking = true) {
+async function callManiAI(prompt, conversationMode = true, showThinking = true, modelOverride = null) {
   return new Promise((resolve) => {
     const agyBin = getAgyBinary();
     const cliEnv = getCliEnv();
@@ -847,7 +847,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
       cloudReq.on('error', (err) => {
         // Cloud VM unreachable — fall through to local agy or Gemini direct
         console.warn(`[MANI AI] Cloud AGY unreachable (${err.message}), falling back to local...`);
-        callGeminiDirect(cleanPrompt).then(resolve);
+        callGeminiDirect(cleanPrompt, modelOverride).then(resolve);
       });
       cloudReq.on('timeout', () => { cloudReq.destroy(); });
       cloudReq.write(body);
@@ -858,7 +858,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
     // ── Priority 2: Local agy CLI (phone is on, Termux running) ──────────────
     // If agy CLI is unavailable (e.g. deployed to Render/Railway), call Gemini API directly
     if (!agyAvailable()) {
-      callGeminiDirect(cleanPrompt).then(resolve);
+      callGeminiDirect(cleanPrompt, modelOverride).then(resolve);
       return;
     }
 
@@ -1553,8 +1553,9 @@ const server = http.createServer(async (req, res) => {
     }
     const conversationMode = body.continue !== false;
     const showThinking = body.showThinking !== false;
-    const aiResult = await callManiAI(prompt, conversationMode, showThinking);
-    recordAuditEntry('MANI_AI_CHAT_INTERACTION', { prompt: prompt.slice(0, 100), success: aiResult.success });
+    const modelOverride = (body.model || '').trim() || null;
+    const aiResult = await callManiAI(prompt, conversationMode, showThinking, modelOverride);
+    recordAuditEntry('MANI_AI_CHAT_INTERACTION', { prompt: prompt.slice(0, 100), success: aiResult.success, model: modelOverride || 'default' });
     return sendJSON(res, aiResult);
   }
 
@@ -1664,6 +1665,50 @@ const server = http.createServer(async (req, res) => {
         status: 'provisioning',
         qrUrl: `http://127.0.0.1:${targetPort}`
       });
+    } catch (e) {
+      return sendJSON(res, { error: e.message }, 500);
+    }
+  }
+
+  // REST API: List available Gemini models (for panel model selector)
+  if (pathname === '/api/models' && req.method === 'GET') {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+    if (!apiKey) {
+      // Return a curated static list if no key is available
+      return sendJSON(res, { models: [
+        { name: 'gemini-3.6-flash', displayName: 'Gemini 3.6 Flash', description: 'Latest fast model' },
+        { name: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', description: 'Most capable model' },
+        { name: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', description: 'Fast and efficient' },
+        { name: 'gemini-2.0-flash', displayName: 'Gemini 2.0 Flash', description: 'Previous generation flash' },
+      ]});
+    }
+    try {
+      const https = require('https');
+      const modelList = await new Promise((resolve, reject) => {
+        const reqOpts = {
+          hostname: 'generativelanguage.googleapis.com',
+          path: `/v1beta/models?key=${apiKey}&pageSize=100`,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        };
+        const r = https.request(reqOpts, (resp) => {
+          let data = '';
+          resp.on('data', c => data += c);
+          resp.on('end', () => {
+            try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+          });
+        });
+        r.on('error', reject);
+        r.setTimeout(10000, () => { r.destroy(); reject(new Error('timeout')); });
+        r.end();
+      });
+      const models = (modelList.models || []).map(m => ({
+        name: m.name.replace('models/', ''),
+        displayName: m.displayName || m.name.replace('models/', ''),
+        description: m.description || '',
+        deprecated: (m.displayName || '').toLowerCase().includes('deprecated') || (m.description || '').toLowerCase().includes('deprecated')
+      }));
+      return sendJSON(res, { models });
     } catch (e) {
       return sendJSON(res, { error: e.message }, 500);
     }
