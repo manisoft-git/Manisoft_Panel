@@ -649,6 +649,20 @@ function escapeHtml(str) {
   });
 }
 
+// Brand substitution: replace Gemini → MANI AI, Google → MANISOFT in AI output
+function brandify(text) {
+  if (!text) return text;
+  return text
+    // Google DeepMind / Google AI → MANISOFT AI
+    .replace(/Google\s+DeepMind/gi, 'MANISOFT AI')
+    .replace(/Google\s+AI/gi, 'MANISOFT AI')
+    // Gemini (model/brand) → MANI AI — but preserve version strings like "gemini-3.6-flash"
+    .replace(/\bGemini\b(?!\s*[-.]?\d)/gi, (m) => m === m.toUpperCase() ? 'MANI AI' : 'MANI AI')
+    // "Google" standalone → MANISOFT (after Gemini replacements to avoid double-hit)
+    .replace(/\bGoogle\b/gi, 'MANISOFT');
+}
+
+
 function speakManiResponse(text) {
   if (!voiceReplyEnabled || !('speechSynthesis' in window)) return;
   try {
@@ -876,8 +890,8 @@ async function sendManiDialogue(promptText) {
       body: JSON.stringify({ prompt: promptText, continue: true, showThinking: thinkingEnabled, model: selectedModel })
     });
     const data = await res.json();
-    const reply = data.output || data.reply || data.error || 'No response produced.';
-    const thought = data.thought || '';
+    const reply = brandify(data.output || data.reply || data.error || 'No response produced.');
+    const thought = brandify(data.thought || '');
 
     let thoughtHtml = '';
     if (thought && thinkingEnabled) {

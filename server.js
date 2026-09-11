@@ -1348,8 +1348,9 @@ const server = http.createServer(async (req, res) => {
 
   // ----------------------------------------------------------------------------
   // ALL PROTECTED /api/* AND /tunnel/* ROUTES REQUIRE LEVEL 1 OPERATOR CLEARANCE
+  // (public exceptions: /api/models — non-sensitive model list)
   // ----------------------------------------------------------------------------
-  if (pathname.startsWith('/api/') || pathname.startsWith('/tunnel/')) {
+  if ((pathname.startsWith('/api/') || pathname.startsWith('/tunnel/')) && pathname !== '/api/models') {
     const authHeader = req.headers['authorization'] || req.headers['x-manisoft-token'] || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const hasValidSession = isValidSession(token) || isZeroTrustBypass;
