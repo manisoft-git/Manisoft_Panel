@@ -774,14 +774,17 @@ async function callGeminiDirect(prompt) {
   try {
     const https = require('https');
     // Map AGY-specific model aliases → real Gemini API model names
+    // Use gemini-3.6-flash as the primary flash model (gemini-2.5-flash deprecated)
     const MODEL_MAP = {
-      'gemini-3.8-flash-high': 'gemini-2.5-flash',
-      'gemini-3.8-flash':      'gemini-2.5-flash',
+      'gemini-3.8-flash-high': 'gemini-3.6-flash',
+      'gemini-3.8-flash':      'gemini-3.6-flash',
       'gemini-3.8-pro':        'gemini-2.5-pro',
-      'gemini-3.5-flash':      'gemini-2.0-flash',
-      'gemini-3.5-pro':        'gemini-2.0-pro-exp',
+      'gemini-3.5-flash':      'gemini-3.6-flash',
+      'gemini-3.5-pro':        'gemini-2.5-pro',
+      'gemini-2.5-flash':      'gemini-3.6-flash',
+      'gemini-2.0-flash':      'gemini-3.6-flash',
     };
-    const rawModel = currentActiveModel || 'gemini-2.0-flash';
+    const rawModel = currentActiveModel || 'gemini-3.6-flash';
     const model = MODEL_MAP[rawModel] || rawModel;
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
