@@ -647,17 +647,18 @@ let currentActiveModel = 'gemini-3.8-flash-high';
 
 // MANI AI Subsystem Bridge (Autonomous Agent Engine with Full Read/Write Fleet Permissions & Thought Streaming)
 function getAgyBinary() {
-  // Termux-native shell wrappers are listed FIRST — the server process runs as Android UID (u0_a339)
-  // outside any proot container, so glibc ELF binaries (/usr/local/bin/agy etc.) fail with ENOENT
-  // because /lib/ld-linux-aarch64.so.1 is only available inside the proot-debian mount namespace.
-  // The Termux bash wrapper at /data/data/com.termux/files/usr/bin/agy runs natively on Android.
+  // NOTE: The agyExec() helper routes all calls through bash shell, which is what
+  // actually fixes ENOENT on proot/Android — not the binary path itself.
+  // /usr/local/bin/agy (glibc ELF) works fine when invoked via bash inside proot.
+  // The Termux wrapper (/data/data/com.termux/files/usr/bin/agy) is intentionally
+  // de-prioritized: it needs glibc-runner/qemu-aarch64 which aren't in Node's PATH.
   const candidates = [
-    '/data/data/com.termux/files/usr/bin/agy',
-    '/data/data/com.termux/files/usr/local/bin/agy',
     '/usr/local/bin/agy',
     '/usr/bin/agy',
     '/root/.local/bin/agy',
     '/root/.gemini/antigravity-cli/bin/agy',
+    '/data/data/com.termux/files/usr/bin/agy',
+    '/data/data/com.termux/files/usr/local/bin/agy',
     '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/usr/local/bin/agy',
     '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/usr/bin/agy',
     '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/root/.local/bin/agy'
@@ -690,7 +691,7 @@ function getAgyBinary() {
       } catch (e) {}
     }
   } catch (e) {}
-  return '/data/data/com.termux/files/usr/bin/agy';
+  return '/usr/local/bin/agy';
 }
 
 function getCliEnv() {
