@@ -650,10 +650,7 @@ function getAgyBinary() {
   const candidates = [
     '/usr/local/bin/agy',
     '/root/.local/bin/agy',
-    '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/root/.local/bin/agy',
-    '/data/data/com.termux/files/home/.local/bin/agy',
-    '/data/data/com.termux/files/usr/bin/agy',
-    '/usr/bin/agy'
+    '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/debian/rootfs/root/.local/bin/agy'
   ];
   for (const c of candidates) {
     try {
@@ -665,27 +662,33 @@ function getAgyBinary() {
       }
     } catch (e) {}
   }
-  return 'agy';
+  return '/usr/local/bin/agy';
 }
 
 function getCliEnv() {
-  const extraPaths = [
+  const priorityPaths = [
+    '/usr/local/bin',
     '/root/.local/bin',
     '/root/.gemini/antigravity-cli/bin',
-    '/usr/local/bin',
     '/usr/bin',
     '/bin',
-    '/data/data/com.termux/files/home/.local/bin',
-    '/data/data/com.termux/files/usr/bin'
+    '/usr/local/sbin',
+    '/usr/sbin',
+    '/sbin'
   ];
   const cur = process.env.PATH || '';
   const parts = cur.split(':').filter(Boolean);
-  for (const p of extraPaths) {
-    if (!parts.includes(p)) parts.unshift(p);
+  const full = [...priorityPaths.filter(p => {
+    try { return fs.existsSync(p); } catch (e) { return false; }
+  })];
+  for (const p of parts) {
+    if (!full.includes(p) && !p.includes('com.termux/files/usr/bin')) {
+      full.push(p);
+    }
   }
   return {
     ...process.env,
-    PATH: parts.join(':'),
+    PATH: full.join(':'),
     CI: 'true',
     NONINTERACTIVE: '1',
     PROJECTS_DIR: fs.existsSync(PROJECTS_DIR) ? PROJECTS_DIR : __dirname
@@ -847,8 +850,8 @@ Never skip pulling before modifications, and never leave completed changes unpus
             const outText = (retryStdout || '') + (retryStderr || '');
             if (retryErr) {
               const parsed = parseThoughtAndOutput(outText);
-              const errMsg = retryErr.code === 'ENOENT'
-                ? `[!] MANI AI binary (${agyBin}) not found or unexecutable in environment path (ENOENT).`
+              const errMsg = (retryErr.code === 'ENOENT' || retryErr.code === 'EACCES')
+                ? `[!] MANI AI binary (${agyBin}) execution error (${retryErr.code}): ${retryErr.message}`
                 : (retryErr.message || 'MANI AI execution failed');
               resolve({
                 success: false,
@@ -873,8 +876,8 @@ Never skip pulling before modifications, and never leave completed changes unpus
         }
         const outText = (stdout || '') + (stderr || '');
         const parsed = parseThoughtAndOutput(outText);
-        const errMsg = err.code === 'ENOENT'
-          ? `[!] MANI AI binary (${agyBin}) not found or unexecutable in environment path (ENOENT).`
+        const errMsg = (err.code === 'ENOENT' || err.code === 'EACCES')
+          ? `[!] MANI AI binary (${agyBin}) execution error (${err.code}): ${err.message}`
           : (err.message || 'MANI AI execution failed');
         resolve({
           success: false,
