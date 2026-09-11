@@ -895,8 +895,10 @@ async function sendManiDialogue(promptText) {
   const statusText = document.getElementById('comm-status-text');
   if (statusText) statusText.textContent = 'MANI AI is reasoning & executing...';
 
-  const selectedModel = (document.getElementById('comm-model-select')?.value || '').trim() || null;
-  const modelLabel = selectedModel || 'MANI AI';
+  const modelSelectEl = document.getElementById('comm-model-select');
+  const selectedModel = (modelSelectEl?.value || '').trim() || null;
+  const selectedOptionText = modelSelectEl?.options[modelSelectEl.selectedIndex]?.text || '';
+  const modelLabel = brandify(selectedOptionText) || 'MANI AI';
 
   aiBubble.innerHTML = `<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 ${escapeHtml(modelLabel)}:</div><div class="thinking-text" style="color: var(--text-dim); font-style: italic;">Reasoning &amp; executing prompt...</div>`;
 
@@ -933,7 +935,7 @@ async function sendManiDialogue(promptText) {
       contentHtml = `<div>${escapeHtml(reply).replace(/\n/g, '<br>')}</div>`;
     }
 
-    aiBubble.innerHTML = `${thoughtHtml}<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 MANI AI:</div>${contentHtml}`;
+    aiBubble.innerHTML = `${thoughtHtml}<div style="font-weight: bold; margin-bottom: 4px; color: var(--color-neon);">🤖 ${escapeHtml(modelLabel)}:</div>${contentHtml}`;
 
     if (data.success !== false) {
       sound.success();
