@@ -1845,6 +1845,14 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`[OPERATOR: ${AUTHORIZED_EMAIL} // CLEARANCE: LEVEL 1]`);
   console.log(`[ACTIVE CYCLE SEED: ${currentNonce.code} // PORT: ${PORT}]`);
   console.log(`======================================================================`);
+  // Config health check — surface missing credentials immediately in logs
+  const { apiKey: renderKey, ownerId } = getRenderConfig();
+  if (!renderKey) console.warn(`[⚠] RENDER_API_KEY not set — cloud publish/deploy will fail`);
+  if (!ownerId)   console.warn(`[⚠] RENDER_OWNER_ID not set — cloud publish/deploy will fail`);
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+  if (!geminiKey) console.warn(`[⚠] GEMINI_API_KEY not set — MANI AI cloud fallback will fail`);
+  if (renderKey && ownerId) console.log(`[✓] Render Cloud Integration: READY (owner: ${ownerId})`);
+  if (geminiKey) console.log(`[✓] MANI AI / Gemini Direct: READY`);
   recordAuditEntry('SERVER_DAEMON_INITIALIZED', { port: PORT, pid: process.pid });
 });
 
