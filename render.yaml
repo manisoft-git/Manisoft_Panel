@@ -11,3 +11,7 @@ services:
         value: production
       - key: OPERATOR_EMAIL
         value: manifestsubeno@gmail.com
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PORT
+        value: "3000"

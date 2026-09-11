@@ -725,12 +725,86 @@ function getCliEnv() {
   };
 }
 
+// Shell-based agy executor — fixes ENOENT on Android/proot.
+// Direct execFile uses libuv fork+execve which proot can't intercept for
+// glibc/shebang binaries spawned from inside a proot child process.
+// Routing through bash ensures proot intercepts the full exec chain.
+function agyExec(bin, args, opts, cb) {
+  const escaped = [bin, ...args].map(a => {
+    const s = String(a);
+    return "'" + s.replace(/'/g, "'\\''") + "'";
+  }).join(' ');
+  const shell = ['/bin/bash', '/usr/bin/bash', '/bin/sh'].find(s => {
+    try { fs.accessSync(s, fs.constants.X_OK); return true; } catch (e) { return false; }
+  }) || '/bin/sh';
+  return child_process.exec(escaped, { ...opts, shell }, cb);
+}
+
+// Detect whether agy CLI is actually executable in this environment (false on cloud)
+function isAgyAvailable() {
+  const bin = getAgyBinary();
+  try {
+    child_process.execSync(`"${bin}" --version`, {
+      timeout: 5000, encoding: 'utf8', shell: '/bin/sh',
+      env: getCliEnv(), stdio: 'pipe'
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Cache availability check (expensive on cold start)
+let _agyAvailable = null;
+function agyAvailable() {
+  if (_agyAvailable === null) _agyAvailable = isAgyAvailable();
+  return _agyAvailable;
+}
+
+// Direct Gemini API fallback for cloud environments where agy CLI isn't installed
+async function callGeminiDirect(prompt) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+  if (!apiKey) {
+    return { success: false, output: '[!] MANI AI unavailable: no GEMINI_API_KEY set and agy CLI not found. Set GEMINI_API_KEY in environment.', thought: '' };
+  }
+  try {
+    const https = require('https');
+    const model = currentActiveModel || 'gemini-2.0-flash';
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 8192, temperature: 0.7 }
+    });
+    const result = await new Promise((res, rej) => {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, (resp) => {
+        let data = '';
+        resp.on('data', c => data += c);
+        resp.on('end', () => { try { res(JSON.parse(data)); } catch (e) { rej(e); } });
+      });
+      req.on('error', rej);
+      req.setTimeout(120000, () => { req.destroy(); rej(new Error('timeout')); });
+      req.write(body);
+      req.end();
+    });
+    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || result?.error?.message || 'No response.';
+    return { success: true, output: text, thought: '', raw: text };
+  } catch (e) {
+    return { success: false, output: `[!] Gemini API error: ${e.message}`, thought: '' };
+  }
+}
+
 async function callManiAI(prompt, conversationMode = true, showThinking = true) {
   return new Promise((resolve) => {
     const agyBin = getAgyBinary();
     const cliEnv = getCliEnv();
     const runCwd = fs.existsSync(PROJECTS_DIR) ? PROJECTS_DIR : __dirname;
     const cleanPrompt = (prompt || 'Hello MANI AI').trim();
+
+    // Cloud fallback: if agy CLI is unavailable (e.g. Render/Railway), call Gemini API directly
+    if (!agyAvailable()) {
+      callGeminiDirect(cleanPrompt).then(resolve);
+      return;
+    }
 
     // Native Slash Command & CLI Subcommand Dispatch
     if (cleanPrompt.startsWith('/')) {
@@ -739,7 +813,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
 
       // /models -> list all available models
       if (slashCmd === '/models') {
-        child_process.execFile(agyBin, ['models'], {
+        agyExec(agyBin, ['models'], {
           cwd: runCwd,
           timeout: 45000,
           encoding: 'utf8',
@@ -770,7 +844,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true) 
       }
 
       // Any other slash command (/usage, /quota, /model, /help, /skills, /agents, /effort, etc.)
-      child_process.execFile(agyBin, [
+        agyExec(agyBin, [
         '-p', cleanPrompt,
         '--dangerously-skip-permissions',
         '--add-dir', runCwd
@@ -848,7 +922,7 @@ Never skip pulling before modifications, and never leave completed changes unpus
     };
 
     const startTime = Date.now();
-    child_process.execFile(agyBin, args, {
+    agyExec(agyBin, args, {
       cwd: runCwd,
       timeout: 180000,
       encoding: 'utf8',
@@ -871,7 +945,7 @@ Never skip pulling before modifications, and never leave completed changes unpus
           } else {
             retryArgs.push('--effort', showThinking ? 'medium' : 'low');
           }
-          child_process.execFile(agyBin, retryArgs, {
+          agyExec(agyBin, retryArgs, {
             cwd: runCwd,
             timeout: 180000,
             encoding: 'utf8',
