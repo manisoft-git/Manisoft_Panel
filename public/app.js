@@ -690,50 +690,67 @@ function openManiModal(initialPrompt = '') {
       }
       commInput.focus();
     }
-    // Populate model selector once (if still showing loading placeholder)
+    // Populate model selector — always show instantly from fallback list,
+    // then silently try to refresh from /api/models for the live full list
     const modelSelect = document.getElementById('comm-model-select');
-    if (modelSelect && modelSelect.options.length === 1 && modelSelect.options[0].value === '') {
+    if (modelSelect && modelSelect.dataset.loaded !== '1') {
+      modelSelect.dataset.loaded = '1';
+
+      // ── Hardcoded fallback list (shown immediately, no server needed) ──
+      const FALLBACK_MODELS = [
+        { name: 'gemini-3.6-flash',      displayName: 'MANI AI 3.6 Flash (Default)', deprecated: false },
+        { name: 'gemini-2.5-pro',         displayName: 'MANI AI 2.5 Pro',              deprecated: false },
+        { name: 'gemini-2.5-flash',       displayName: 'MANI AI 2.5 Flash',            deprecated: false },
+        { name: 'gemini-2.5-flash-lite',  displayName: 'MANI AI 2.5 Flash Lite',       deprecated: false },
+        { name: 'gemini-2.0-flash',       displayName: 'MANI AI 2.0 Flash',            deprecated: false },
+        { name: 'gemini-1.5-pro',         displayName: 'MANI AI 1.5 Pro',              deprecated: true  },
+        { name: 'gemini-1.5-flash',       displayName: 'MANI AI 1.5 Flash',            deprecated: true  },
+        { name: 'gemini-1.0-pro',         displayName: 'MANI AI 1.0 Pro',              deprecated: true  },
+      ];
+
+      function populateModelSelect(models) {
+        modelSelect.innerHTML = '';
+        const active = models.filter(m => !m.deprecated);
+        const deprecated = models.filter(m => m.deprecated);
+        if (active.length) {
+          const g1 = document.createElement('optgroup');
+          g1.label = '── Active Models ──';
+          active.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            opt.textContent = brandify(m.displayName || m.name);
+            opt.title = m.description || '';
+            g1.appendChild(opt);
+          });
+          modelSelect.appendChild(g1);
+        }
+        if (deprecated.length) {
+          const g2 = document.createElement('optgroup');
+          g2.label = '── Deprecated ──';
+          deprecated.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            opt.textContent = `⚠ ${brandify(m.displayName || m.name)}`;
+            opt.title = m.description || '';
+            g2.appendChild(opt);
+          });
+          modelSelect.appendChild(g2);
+        }
+        // Pre-select first option
+        if (modelSelect.options.length > 0) modelSelect.options[0].selected = true;
+      }
+
+      // Show fallback instantly
+      populateModelSelect(FALLBACK_MODELS);
+
+      // Then try to refresh with live list from server
       fetch('/api/models')
         .then(r => r.json())
         .then(data => {
           if (!data.models || !data.models.length) return;
-          modelSelect.innerHTML = '';
-          // Group: non-deprecated first, then deprecated
-          const active = data.models.filter(m => !m.deprecated);
-          const deprecated = data.models.filter(m => m.deprecated);
-          if (active.length) {
-            const g1 = document.createElement('optgroup');
-            g1.label = '── Active Models ──';
-            active.forEach(m => {
-              const opt = document.createElement('option');
-              opt.value = m.name;
-              opt.textContent = m.displayName || m.name;
-              opt.title = m.description || '';
-              g1.appendChild(opt);
-            });
-            modelSelect.appendChild(g1);
-          }
-          if (deprecated.length) {
-            const g2 = document.createElement('optgroup');
-            g2.label = '── Deprecated ──';
-            deprecated.forEach(m => {
-              const opt = document.createElement('option');
-              opt.value = m.name;
-              opt.textContent = `⚠ ${m.displayName || m.name}`;
-              opt.title = m.description || '';
-              g2.appendChild(opt);
-            });
-            modelSelect.appendChild(g2);
-          }
-          // Pre-select the current default
-          const defaultModel = 'gemini-3.6-flash';
-          for (const opt of modelSelect.options) {
-            if (opt.value === defaultModel) { opt.selected = true; break; }
-          }
+          populateModelSelect(data.models);
         })
-        .catch(() => {
-          modelSelect.innerHTML = '<option value="">⚡ Default model</option>';
-        });
+        .catch(() => { /* keep fallback list */ });
     }
   }
 }
