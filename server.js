@@ -213,7 +213,7 @@ function pingFleetKeepAlive() {
       const u = new URL(targetUrl);
       const mod = u.protocol === 'https:' ? https : http;
       const req = mod.get(targetUrl, {
-        headers: { 'User-Agent': 'ManiSoft-Autonomous-KeepAlive/2.0' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 ManiSoft-Autonomous-KeepAlive/2.0' },
         timeout: 20000
       }, (res) => {
         res.resume();
