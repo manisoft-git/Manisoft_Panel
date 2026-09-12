@@ -193,6 +193,41 @@ function rotateNonceIfExpired() {
 // Check every 10s for nonce rotation
 setInterval(rotateNonceIfExpired, 10000);
 
+// ============================================================================
+// 24/7 FLEET KEEP-ALIVE ANTI-SLEEP ENGINE
+// Periodically pings all ManiSoft Render services to prevent cold-sleep spin-downs
+// ============================================================================
+const FLEET_KEEP_ALIVE_URLS = [
+  'https://manisoft-passmaster-ai.onrender.com',
+  'https://manisoft-lumina.onrender.com',
+  'https://manisoft-panel.onrender.com',
+  'https://manisoft-starshine.onrender.com',
+  'https://manisoft-strike-ops.onrender.com',
+  'https://manisoft-subway-surfers.onrender.com',
+  'https://manisoft-aether-transport.onrender.com'
+];
+
+function pingFleetKeepAlive() {
+  FLEET_KEEP_ALIVE_URLS.forEach(targetUrl => {
+    try {
+      const u = new URL(targetUrl);
+      const mod = u.protocol === 'https:' ? https : http;
+      const req = mod.get(targetUrl, {
+        headers: { 'User-Agent': 'ManiSoft-Autonomous-KeepAlive/2.0' },
+        timeout: 20000
+      }, (res) => {
+        res.resume();
+      });
+      req.on('error', () => {});
+      req.on('timeout', () => req.destroy());
+    } catch (e) {}
+  });
+}
+
+// Warm up fleet on startup, then ping every 8 minutes
+setTimeout(pingFleetKeepAlive, 5000);
+setInterval(pingFleetKeepAlive, 8 * 60 * 1000);
+
 const SOVEREIGN_MASTER_SECRET = process.env.MASTER_SECRET || '$$manisoft11console';
 
 function isAuthorizedPassSeed(key) {
