@@ -54,7 +54,7 @@ export async function renderFleetMatrix(containerEl) {
           </p>
         </div>
         <div class="deck-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-          <button id="btn-koyeb-publish-all" class="btn-primary-sm" style="background:#00e5ff; color:#000; font-weight:700;">🚀 DEPLOY KOYEB 24/7</button>
+          <button id="btn-zeabur-deploy" class="btn-primary-sm" style="background:#8b5cf6; color:#fff; font-weight:700;">⚡ LAUNCH ZEABUR (1-CLICK)</button>
           <button id="btn-cloud-publish-all" class="btn-primary-sm" style="background:#10b981; color:#000; font-weight:700;">☁️ DEPLOY RENDER 24/7</button>
           <button id="btn-publish-all" class="btn-primary-sm">⚡ START LOCAL</button>
           <button id="btn-sync-all" class="btn-secondary-sm">🐙 SYNC GITHUB</button>
@@ -303,6 +303,16 @@ export async function renderFleetMatrix(containerEl) {
         setTimeout(() => btn.textContent = orig, 1800);
       });
     });
+
+    // Master Zeabur Launch button
+    const zeaburDeployBtn = containerEl.querySelector('#btn-zeabur-deploy');
+    if (zeaburDeployBtn) {
+      zeaburDeployBtn.addEventListener('click', () => {
+        sound.tap();
+        window.open('https://dash.zeabur.com', '_blank');
+        alert('Opening Zeabur Console (https://dash.zeabur.com):\n1. Click "Sign in with GitHub" (manisoft-git)\n2. Click "+ Create Project" -> name it "manisoft"\n3. Click "Deploy New Service" -> "Git" -> Select your fleet repos (Manisoft_Panel, Lumina, etc.)\n4. Under "Networking", click "Generate Domain" for free 24/7 HTTPS URLs!');
+      });
+    }
 
     // Master Koyeb Deploy All button
     const koyebPublishAllBtn = containerEl.querySelector('#btn-koyeb-publish-all');

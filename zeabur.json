@@ -1,0 +1,49 @@
+{
+  "apiToken": "••••••••••••",
+  "projectName": "manisoft",
+  "region": "sfo",
+  "services": {
+    "Manisoft_Panel": {
+      "repo": "manisoft-git/Manisoft_Panel",
+      "port": 3000,
+      "branch": "main",
+      "domain": "manisoft-panel"
+    },
+    "Lumina": {
+      "repo": "manisoft-git/Lumina",
+      "port": 8080,
+      "branch": "main",
+      "domain": "manisoft-lumina"
+    },
+    "passmaster_ai": {
+      "repo": "manisoft-git/passmaster_ai",
+      "port": 5050,
+      "branch": "main",
+      "domain": "manisoft-passmaster"
+    },
+    "starshine": {
+      "repo": "manisoft-git/starshine",
+      "port": 5000,
+      "branch": "main",
+      "domain": "manisoft-starshine"
+    },
+    "strike_ops": {
+      "repo": "manisoft-git/strike_ops",
+      "port": 8081,
+      "branch": "main",
+      "domain": "manisoft-strikeops"
+    },
+    "subway_surfers": {
+      "repo": "manisoft-git/subway_surfers",
+      "port": 8082,
+      "branch": "main",
+      "domain": "manisoft-subway"
+    },
+    "aether-transport": {
+      "repo": "manisoft-git/aether-transport",
+      "port": 9090,
+      "branch": "main",
+      "domain": "manisoft-aether"
+    }
+  }
+}

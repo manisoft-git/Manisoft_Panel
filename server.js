@@ -1655,6 +1655,21 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // REST API: Zeabur 24/7 Cloud Integration
+  if (pathname === "/api/zeabur/status") {
+    const configFile = path.join(__dirname, 'zeabur.json');
+    let config = { configured: false, services: {} };
+    if (fs.existsSync(configFile)) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+        config.configured = raw.apiToken && raw.apiToken !== '••••••••••••';
+        config.services = raw.services || {};
+        config.projectName = raw.projectName || 'manisoft';
+      } catch (e) {}
+    }
+    return sendJSON(res, { success: true, ...config });
+  }
+
   // REST API: Cloud FinOps Zombie Reaper
   if (pathname === '/api/cloud/finops') {
     return sendJSON(res, {
