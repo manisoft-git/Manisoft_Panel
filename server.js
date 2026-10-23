@@ -198,7 +198,7 @@ setInterval(rotateNonceIfExpired, 10000);
 // Periodically pings all ManiSoft Render services to prevent cold-sleep spin-downs
 // ============================================================================
 const FLEET_KEEP_ALIVE_URLS = [
-  'https://manisoft-lumina-yhpa.onrender.com',
+  'https://manisoft-lumina-a6sk.onrender.com',
   'https://manisoft-passmaster-ai-jc1n.onrender.com',
   'https://manisoft-panel-hepk.onrender.com',
   'https://manisoft-starshine-fezw.onrender.com',
