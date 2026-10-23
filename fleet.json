@@ -1,59 +1,65 @@
 {
-  "lastScanned": "2026-09-08T20:45:00Z",
+  "lastScanned": "2026-10-23T18:18:00Z",
   "projects": [
     {
       "name": "lumina",
       "path": "../lumina",
       "framework": "Flask / Socket.IO",
       "port": 8080,
-      "status": "configured",
+      "status": "online",
       "entry": "app.py",
-      "publicUrl": "http://127.0.0.1:8080"
+      "publicUrl": "https://manisoft-lumina-yhpa.onrender.com",
+      "renderUrl": "https://manisoft-lumina-yhpa.onrender.com"
     },
     {
       "name": "passmaster_ai",
       "path": "../passmaster_ai",
       "framework": "Flask / AI Engine",
       "port": 5050,
-      "status": "configured",
+      "status": "online",
       "entry": "app.py",
-      "publicUrl": "http://127.0.0.1:5050"
+      "publicUrl": "https://manisoft-passmaster-ai-jc1n.onrender.com",
+      "renderUrl": "https://manisoft-passmaster-ai-jc1n.onrender.com"
     },
     {
       "name": "starshine",
       "path": "../starshine",
       "framework": "Flask / Python",
       "port": 5000,
-      "status": "configured",
+      "status": "online",
       "entry": "app.py",
-      "publicUrl": "http://127.0.0.1:5000"
+      "publicUrl": "https://manisoft-starshine-fezw.onrender.com",
+      "renderUrl": "https://manisoft-starshine-fezw.onrender.com"
     },
     {
       "name": "strike_ops",
       "path": "../strike_ops",
       "framework": "HTML5 / Python HTTP",
       "port": 8081,
-      "status": "configured",
+      "status": "online",
       "entry": "server.py",
-      "publicUrl": "http://127.0.0.1:8081"
+      "publicUrl": "https://manisoft-strike-ops-m4bc.onrender.com",
+      "renderUrl": "https://manisoft-strike-ops-m4bc.onrender.com"
     },
     {
       "name": "subway_surfers",
       "path": "../subway_surfers",
       "framework": "HTML5 / Python HTTP",
       "port": 8082,
-      "status": "configured",
+      "status": "online",
       "entry": "server.py",
-      "publicUrl": "http://127.0.0.1:8082"
+      "publicUrl": "https://manisoft-subway-surfers-3zz5.onrender.com",
+      "renderUrl": "https://manisoft-subway-surfers-3zz5.onrender.com"
     },
     {
       "name": "aether-transport",
       "path": "../aether-transport",
       "framework": "Rust / Tokio Mesh",
       "port": 9090,
-      "status": "configured",
+      "status": "online",
       "entry": "server.py",
-      "publicUrl": "http://127.0.0.1:9090"
+      "publicUrl": "https://manisoft-aether-transport-u7di.onrender.com",
+      "renderUrl": "https://manisoft-aether-transport-u7di.onrender.com"
     }
   ]
 }

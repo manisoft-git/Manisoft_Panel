@@ -198,13 +198,13 @@ setInterval(rotateNonceIfExpired, 10000);
 // Periodically pings all ManiSoft Render services to prevent cold-sleep spin-downs
 // ============================================================================
 const FLEET_KEEP_ALIVE_URLS = [
-  'https://manisoft-passmaster-ai.onrender.com',
-  'https://manisoft-lumina.onrender.com',
-  'https://manisoft-panel.onrender.com',
-  'https://manisoft-starshine.onrender.com',
-  'https://manisoft-strike-ops.onrender.com',
-  'https://manisoft-subway-surfers.onrender.com',
-  'https://manisoft-aether-transport.onrender.com'
+  'https://manisoft-lumina-yhpa.onrender.com',
+  'https://manisoft-passmaster-ai-jc1n.onrender.com',
+  'https://manisoft-panel-hepk.onrender.com',
+  'https://manisoft-starshine-fezw.onrender.com',
+  'https://manisoft-strike-ops-m4bc.onrender.com',
+  'https://manisoft-subway-surfers-3zz5.onrender.com',
+  'https://manisoft-aether-transport-u7di.onrender.com'
 ];
 
 function pingFleetKeepAlive() {
