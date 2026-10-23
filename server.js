@@ -614,6 +614,44 @@ async function deleteRenderService(projName, serviceId = null) {
 }
 
 // ------------------------------------------------------------------------------
+// KOYEB 24/7 CLOUD FLEET INTEGRATION
+// ------------------------------------------------------------------------------
+function getKoyebConfig() {
+  const configFile = path.join(__dirname, 'koyeb.json');
+  if (fs.existsSync(configFile)) {
+    try {
+      return JSON.parse(fs.readFileSync(configFile, 'utf8'));
+    } catch (e) {}
+  }
+  return { apiToken: '••••••••••••', appName: 'manisoft' };
+}
+
+function getKoyebStatus() {
+  let authStatus = { authenticated: false, output: '', services: [] };
+  try {
+    const whoami = child_process.execSync('koyeb whoami 2>&1', { timeout: 10000 }).toString();
+    authStatus.authenticated = !whoami.includes('Error') && !whoami.includes('unable to find');
+    authStatus.output = whoami.trim();
+  } catch (e) {
+    authStatus.output = e.stdout ? e.stdout.toString() : (e.message || '');
+  }
+
+  if (authStatus.authenticated) {
+    try {
+      const svcs = child_process.execSync('koyeb services list --app manisoft -o json 2>/dev/null || koyeb services list -o json 2>/dev/null', { timeout: 10000 }).toString();
+      authStatus.services = JSON.parse(svcs);
+    } catch (e) {}
+  }
+  return authStatus;
+}
+
+function deployProjectToKoyeb(projName = 'all') {
+  const script = path.join(__dirname, 'deploy-koyeb.sh');
+  const output = child_process.execSync(`bash "${script}" "${projName}" 2>&1`, { cwd: __dirname, timeout: 120000 }).toString();
+  return { success: true, project: projName, output };
+}
+
+// ------------------------------------------------------------------------------
 // 4. FLEET MANAGER & RUNTIME INSPECTOR
 // ------------------------------------------------------------------------------
 function getFleetMatrix() {
@@ -1559,6 +1597,43 @@ const server = http.createServer(async (req, res) => {
       const result = await deleteRenderService(projName, serviceId);
       recordAuditEntry("RENDER_PROJECT_DELETED", { project: projName, serviceId, result });
       return sendJSON(res, { success: true, result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  // REST API: Koyeb 24/7 Cloud Fleet Integration
+  if (pathname === "/api/koyeb/status") {
+    try {
+      const result = getKoyebStatus();
+      return sendJSON(res, { success: true, ...result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  if (pathname === "/api/koyeb/publish" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const projName = body.project || 'all';
+      const result = deployProjectToKoyeb(projName);
+      recordAuditEntry("KOYEB_PROJECT_PUBLISHED", { project: projName, result });
+      return sendJSON(res, { success: true, result });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
+  if (pathname === "/api/koyeb/token" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const token = (body.token || '').trim();
+      if (!token || token === '••••••••••••') {
+        throw new Error('Please provide a valid Koyeb API token');
+      }
+      child_process.execSync(`bash deploy-koyeb.sh set-token "${token}"`, { cwd: __dirname, timeout: 10000 });
+      recordAuditEntry("KOYEB_TOKEN_CONFIGURED", { user: AUTHORIZED_EMAIL });
+      return sendJSON(res, { success: true, message: 'Koyeb API token configured successfully.' });
     } catch (err) {
       return sendJSON(res, { success: false, error: err.message }, 500);
     }

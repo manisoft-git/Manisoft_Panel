@@ -13,9 +13,14 @@ echo " Repository: https://github.com/manisoft-git/Manisoft_Panel"
 echo " Target:     Always-On Cloud Execution (Immune to phone shutdown)"
 echo "======================================================================"
 
-TARGET="${1:-render}"
+TARGET="${1:-koyeb}"
 
 case "$TARGET" in
+    koyeb)
+        echo "[*] Koyeb 24/7 Autonomous Cloud Runner configured (deploy-koyeb.sh)."
+        echo "    🔗 Koyeb Dashboard: https://app.koyeb.com"
+        "$SCRIPT_DIR/deploy-koyeb.sh" "${2:-status}"
+        ;;
     render)
         echo "[*] Render Blueprint configured (render.yaml)."
         echo "    🔗 1-Click Deploy Link: https://dashboard.render.com/select-repo?type=web"
@@ -46,6 +51,6 @@ case "$TARGET" in
         fi
         ;;
     *)
-        echo "Usage: ./deploy-cloud.sh [render|railway|fly|docker]"
+        echo "Usage: ./deploy-cloud.sh [koyeb|render|railway|fly|docker]"
         ;;
 esac

@@ -1,0 +1,50 @@
+{
+  "apiToken": "••••••••••••",
+  "appName": "manisoft",
+  "instanceType": "nano",
+  "region": "was",
+  "projects": {
+    "Manisoft_Panel": {
+      "repo": "github.com/manisoft-git/Manisoft_Panel",
+      "port": 3000,
+      "branch": "main",
+      "type": "web"
+    },
+    "lumina": {
+      "repo": "github.com/manisoft-git/Lumina",
+      "port": 8080,
+      "branch": "main",
+      "type": "web"
+    },
+    "passmaster_ai": {
+      "repo": "github.com/manisoft-git/passmaster_ai",
+      "port": 5050,
+      "branch": "main",
+      "type": "web"
+    },
+    "starshine": {
+      "repo": "github.com/manisoft-git/starshine",
+      "port": 5000,
+      "branch": "main",
+      "type": "web"
+    },
+    "strike_ops": {
+      "repo": "github.com/manisoft-git/strike_ops",
+      "port": 8081,
+      "branch": "main",
+      "type": "web"
+    },
+    "subway_surfers": {
+      "repo": "github.com/manisoft-git/subway_surfers",
+      "port": 8082,
+      "branch": "main",
+      "type": "web"
+    },
+    "aether-transport": {
+      "repo": "github.com/manisoft-git/aether-transport",
+      "port": 9090,
+      "branch": "main",
+      "type": "web"
+    }
+  }
+}

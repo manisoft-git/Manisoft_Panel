@@ -54,7 +54,8 @@ export async function renderFleetMatrix(containerEl) {
           </p>
         </div>
         <div class="deck-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-          <button id="btn-cloud-publish-all" class="btn-primary-sm" style="background:#10b981; color:#000; font-weight:700;">☁️ DEPLOY ALL 24/7</button>
+          <button id="btn-koyeb-publish-all" class="btn-primary-sm" style="background:#00e5ff; color:#000; font-weight:700;">🚀 DEPLOY KOYEB 24/7</button>
+          <button id="btn-cloud-publish-all" class="btn-primary-sm" style="background:#10b981; color:#000; font-weight:700;">☁️ DEPLOY RENDER 24/7</button>
           <button id="btn-publish-all" class="btn-primary-sm">⚡ START LOCAL</button>
           <button id="btn-sync-all" class="btn-secondary-sm">🐙 SYNC GITHUB</button>
           <button id="btn-fleet-refresh" class="btn-ghost-sm">↻ REFRESH</button>
@@ -302,7 +303,52 @@ export async function renderFleetMatrix(containerEl) {
       });
     });
 
-    // Master Cloud Deploy All button
+    // Master Koyeb Deploy All button
+    const koyebPublishAllBtn = containerEl.querySelector('#btn-koyeb-publish-all');
+    if (koyebPublishAllBtn) {
+      koyebPublishAllBtn.addEventListener('click', async () => {
+        sound.tap();
+        try {
+          // Check Koyeb auth status
+          const statusRes = await fetch('/api/koyeb/status').then(r => r.json()).catch(() => ({ authenticated: false }));
+          if (!statusRes.authenticated) {
+            const token = prompt('Enter your Koyeb API Token to enable 24/7 autonomous deployment:\n(Get one free at https://app.koyeb.com/user/settings/api)');
+            if (!token) return;
+            const tokenRes = await fetch('/api/koyeb/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: token.trim() })
+            }).then(r => r.json());
+            if (!tokenRes.success) {
+              alert('Failed to configure Koyeb token: ' + (tokenRes.error || 'Unknown error'));
+              return;
+            }
+          }
+
+          if (!confirm('Deploy entire fleet to Koyeb 24/7 cloud runner?')) return;
+          koyebPublishAllBtn.textContent = '🚀 DEPLOYING KOYEB...';
+          koyebPublishAllBtn.disabled = true;
+
+          const pubRes = await fetch('/api/koyeb/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project: 'all' })
+          }).then(r => r.json());
+
+          sound.success();
+          alert('Koyeb Deployment Dispatched:\n' + (pubRes.result?.output || pubRes.output || 'Dispatched successfully!'));
+        } catch (err) {
+          sound.error();
+          alert('Koyeb deploy error: ' + err.message);
+        } finally {
+          koyebPublishAllBtn.textContent = '🚀 DEPLOY KOYEB 24/7';
+          koyebPublishAllBtn.disabled = false;
+          renderFleetMatrix(containerEl);
+        }
+      });
+    }
+
+    // Master Cloud Deploy All button (Render)
     const cloudPublishAllBtn = containerEl.querySelector('#btn-cloud-publish-all');
     if (cloudPublishAllBtn) {
       cloudPublishAllBtn.addEventListener('click', async () => {

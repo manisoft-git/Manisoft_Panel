@@ -1,0 +1,29 @@
+# ==============================================================================
+# MANI$OFT // KOYEB 24/7 AUTONOMOUS CLOUD BLUEPRINT
+# ==============================================================================
+name: manisoft
+services:
+  - name: manisoft-panel
+    git:
+      repository: github.com/manisoft-git/Manisoft_Panel
+      branch: main
+    instance_type: nano
+    regions:
+      - was
+    env:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: "production"
+    ports:
+      - port: 3000
+        protocol: http
+    routes:
+      - path: /
+        port: 3000
+    health_checks:
+      - http:
+          port: 3000
+          path: /api/health
+          interval: 30
+          timeout: 5
