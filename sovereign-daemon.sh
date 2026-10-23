@@ -179,6 +179,9 @@ while true; do
             echo $! > "$TUNNEL_PID_FILE"
         fi
     fi
+
+    # Check Fleet Projects (Self-Healing Forever)
+    "$SCRIPT_DIR/publish-fleet.sh" >> /tmp/manisoft_watchdog.log 2>&1 || true
 done
 W_EOF
     chmod +x "$SCRIPT_DIR/.watchdog_loop.sh"
@@ -371,6 +374,7 @@ case "$ACTION" in
         acquire_wake_lock
         start_server
         start_tunnel
+        "$SCRIPT_DIR/publish-fleet.sh"
         start_watchdog
         install_autoboot
         print_online_url

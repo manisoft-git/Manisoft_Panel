@@ -31,9 +31,9 @@ for i in "${!PROJECTS[@]}"; do
             if ! curl -s -m 1 "http://127.0.0.1:$PORT" >/dev/null 2>&1; then
                 echo "      -> Starting background instance for $NAME on port $PORT..."
                 if [ -f "$PROJ_DIR/app.py" ]; then
-                    (cd "$PROJ_DIR" && PORT=$PORT nohup python3 app.py > /tmp/"${NAME}".log 2>&1 &) || true
+                    (cd "$PROJ_DIR" && PORT=$PORT setsid python3 -u app.py >> /tmp/"${NAME}".log 2>&1 &) || true
                 elif [ -f "$PROJ_DIR/server.py" ]; then
-                    (cd "$PROJ_DIR" && PORT=$PORT nohup python3 server.py > /tmp/"${NAME}".log 2>&1 &) || true
+                    (cd "$PROJ_DIR" && PORT=$PORT setsid python3 -u server.py >> /tmp/"${NAME}".log 2>&1 &) || true
                 elif [ -f "$PROJ_DIR/Cargo.toml" ]; then
                     echo "      [✓] Rust workspace configured for $NAME."
                 fi
