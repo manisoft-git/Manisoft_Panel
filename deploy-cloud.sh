@@ -13,9 +13,22 @@ echo " Repository: https://github.com/manisoft-git/Manisoft_Panel"
 echo " Target:     Always-On Cloud Execution (Immune to phone shutdown)"
 echo "======================================================================"
 
-TARGET="${1:-koyeb}"
+TARGET="${1:-huggingface}"
 
 case "$TARGET" in
+    hf|huggingface)
+        echo "[*] Hugging Face Spaces (100% Free Forever, 16GB RAM, No Credit Card)."
+        echo "    🔗 Create New Space: https://huggingface.co/new-space"
+        echo "    SDK: Docker (Blank)"
+        echo "    Hardware: CPU Basic (2 vCPU · 16 GB RAM · Free)"
+        echo "    Repository to import: https://github.com/manisoft-git/Manisoft_Panel"
+        echo "[✓] Port 7860/3000 configured. Space will run 24/7 forever."
+        ;;
+    zeabur)
+        echo "[*] Zeabur 1-Click Git Cloud (Free tier, instant setup)."
+        echo "    🔗 Deploy: https://zeabur.com"
+        echo "    Connect GitHub -> Select manisoft-git/Manisoft_Panel"
+        ;;
     koyeb)
         echo "[*] Koyeb 24/7 Autonomous Cloud Runner configured (deploy-koyeb.sh)."
         echo "    🔗 Koyeb Dashboard: https://app.koyeb.com"
@@ -51,6 +64,6 @@ case "$TARGET" in
         fi
         ;;
     *)
-        echo "Usage: ./deploy-cloud.sh [koyeb|render|railway|fly|docker]"
+        echo "Usage: ./deploy-cloud.sh [huggingface|zeabur|koyeb|render|railway|fly|docker]"
         ;;
 esac
