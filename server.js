@@ -1639,6 +1639,22 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // REST API: Make All GitHub Repositories Public
+  if (pathname === "/api/github/make-public" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      const token = (body.token || '').trim();
+      if (!token || token === '••••••••••••') {
+        throw new Error('Please provide a valid GitHub Personal Access Token (PAT) with repo scope');
+      }
+      const output = child_process.execSync(`bash make-repos-public.sh "${token}"`, { cwd: __dirname, timeout: 60000 }).toString();
+      recordAuditEntry("GITHUB_REPOS_MADE_PUBLIC", { user: AUTHORIZED_EMAIL });
+      return sendJSON(res, { success: true, message: 'All repositories converted to public!', output });
+    } catch (err) {
+      return sendJSON(res, { success: false, error: err.message }, 500);
+    }
+  }
+
   // REST API: Cloud FinOps Zombie Reaper
   if (pathname === '/api/cloud/finops') {
     return sendJSON(res, {

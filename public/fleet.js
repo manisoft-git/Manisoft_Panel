@@ -58,6 +58,7 @@ export async function renderFleetMatrix(containerEl) {
           <button id="btn-cloud-publish-all" class="btn-primary-sm" style="background:#10b981; color:#000; font-weight:700;">☁️ DEPLOY RENDER 24/7</button>
           <button id="btn-publish-all" class="btn-primary-sm">⚡ START LOCAL</button>
           <button id="btn-sync-all" class="btn-secondary-sm">🐙 SYNC GITHUB</button>
+          <button id="btn-make-public" class="btn-secondary-sm" style="border-color:#38bdf8; color:#38bdf8;">🌐 MAKE REPOS PUBLIC</button>
           <button id="btn-fleet-refresh" class="btn-ghost-sm">↻ REFRESH</button>
         </div>
       </div>
@@ -405,6 +406,37 @@ export async function renderFleetMatrix(containerEl) {
           alert('Sync failed: ' + e.message);
         }
         renderFleetMatrix(containerEl);
+      });
+    }
+
+    const makePublicBtn = containerEl.querySelector('#btn-make-public');
+    if (makePublicBtn) {
+      makePublicBtn.addEventListener('click', async () => {
+        sound.tap();
+        const token = prompt('Enter your GitHub Personal Access Token (PAT) with repo scope:\n(Create one at https://github.com/settings/tokens/new)');
+        if (!token) return;
+        makePublicBtn.textContent = '🌐 CONVERTING...';
+        makePublicBtn.disabled = true;
+        try {
+          const res = await fetch('/api/github/make-public', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token.trim() })
+          }).then(r => r.json());
+          if (res.success) {
+            sound.success();
+            alert('Success!\nAll 7 repositories have been converted to PUBLIC!\nYou can now clone anywhere without authentication errors.');
+          } else {
+            sound.error();
+            alert('Failed: ' + (res.error || 'Unknown error'));
+          }
+        } catch (e) {
+          sound.error();
+          alert('Request failed: ' + e.message);
+        } finally {
+          makePublicBtn.textContent = '🌐 MAKE REPOS PUBLIC';
+          makePublicBtn.disabled = false;
+        }
       });
     }
 
