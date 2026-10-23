@@ -202,8 +202,6 @@ const FLEET_KEEP_ALIVE_URLS = [
   'https://manisoft-passmaster-ai-jc1n.onrender.com',
   'https://manisoft-panel-hepk.onrender.com',
   'https://manisoft-starshine-fezw.onrender.com',
-  'https://manisoft-strike-ops-m4bc.onrender.com',
-  'https://manisoft-subway-surfers-3zz5.onrender.com',
   'https://manisoft-aether-transport-u7di.onrender.com'
 ];
 

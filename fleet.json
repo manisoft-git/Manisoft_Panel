@@ -36,9 +36,9 @@
       "path": "../strike_ops",
       "framework": "HTML5 / Python HTTP",
       "port": 8081,
-      "status": "online",
+      "status": "stopped",
       "entry": "server.py",
-      "publicUrl": "https://manisoft-strike-ops-m4bc.onrender.com",
+      "publicUrl": "http://127.0.0.1:8081",
       "renderUrl": "https://manisoft-strike-ops-m4bc.onrender.com"
     },
     {
@@ -46,9 +46,9 @@
       "path": "../subway_surfers",
       "framework": "HTML5 / Python HTTP",
       "port": 8082,
-      "status": "online",
+      "status": "stopped",
       "entry": "server.py",
-      "publicUrl": "https://manisoft-subway-surfers-3zz5.onrender.com",
+      "publicUrl": "http://127.0.0.1:8082",
       "renderUrl": "https://manisoft-subway-surfers-3zz5.onrender.com"
     },
     {
