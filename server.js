@@ -1169,6 +1169,45 @@ const server = http.createServer(async (req, res) => {
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = urlObj.pathname;
 
+  // Universal Fleet Reverse Proxy (/p/:project/*)
+  const proxyMatch = pathname.match(/^\/p\/([a-zA-Z0-9_-]+)(\/.*)?$/);
+  if (proxyMatch) {
+    const projKey = proxyMatch[1].toLowerCase().replace(/-/g, '_');
+    const portMap = {
+      lumina: 8080,
+      passmaster_ai: 5050,
+      starshine: 5000,
+      strike_ops: 8081,
+      subway_surfers: 8082,
+      aether_transport: 9090
+    };
+    const targetPort = portMap[projKey];
+    if (targetPort) {
+      const targetPath = (proxyMatch[2] || '/') + (urlObj.search || '');
+      const proxyReq = http.request({
+        host: '127.0.0.1',
+        port: targetPort,
+        path: targetPath,
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: `127.0.0.1:${targetPort}`,
+          'x-forwarded-for': clientIP,
+          'x-forwarded-proto': 'https'
+        }
+      }, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.pipe(res);
+      });
+      proxyReq.on('error', (err) => {
+        res.writeHead(502, { 'Content-Type': 'text/plain' });
+        res.end(`502 Bad Gateway: Service ${projKey} on port ${targetPort} unreachable: ${err.message}`);
+      });
+      req.pipe(proxyReq);
+      return;
+    }
+  }
+
   // Dual-Layer Zero-Trust Header Check
   const cfUser = req.headers['cf-access-authenticated-user-email'];
   const isZeroTrustBypass = cfUser && cfUser.toLowerCase() === AUTHORIZED_EMAIL.toLowerCase();

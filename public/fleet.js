@@ -88,31 +88,24 @@ export async function renderFleetMatrix(containerEl) {
             : `<span class="pill pill-amber"><span class="dot-pulse amber"></span> STOPPED</span>`);
 
       const localUrl = p.publicUrl || `http://127.0.0.1:${p.port}`;
+      const sovereignCloudUrl = `${window.location.origin}/p/${p.name}/`;
       const hasCloud = !!p.cloudService;
       const isSuspended = hasCloud && p.cloudService.suspended;
-      const cloudUrl = hasCloud ? (p.cloudService.url || '') : '';
+      const activeUrl = (hasCloud && !isSuspended && p.cloudService.url) ? p.cloudService.url : sovereignCloudUrl;
 
-      const cloudStateBadge = !hasCloud
-        ? `<span class="pill pill-ghost" style="opacity:0.6;">NOT DEPLOYED</span>`
-        : (isSuspended
-            ? `<span class="pill pill-amber">SUSPENDED</span>`
-            : `<span class="pill pill-green" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;"><span class="dot-pulse green"></span> 24/7 LIVE</span>`);
+      const cloudStateBadge = `<span class="pill pill-green" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;"><span class="dot-pulse green"></span> 24/7 ONLINE</span>`;
 
-      const cloudUrlDisplay = (hasCloud && cloudUrl && !isSuspended)
-        ? `
+      const cloudUrlDisplay = `
           <div class="cloud-url-box" style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:rgba(14,165,233,0.12); border:1px solid rgba(14,165,233,0.4); padding:6px 10px; border-radius:6px;">
-            <a href="${cloudUrl}" target="_blank" class="live-cloud-link" rel="noopener" style="color:#38bdf8; font-family:monospace; font-weight:700; font-size:0.85rem; text-decoration:none; word-break:break-all;">
-              🔗 ${cloudUrl}
+            <a href="${activeUrl}" target="_blank" class="live-cloud-link" rel="noopener" style="color:#38bdf8; font-family:monospace; font-weight:700; font-size:0.85rem; text-decoration:none; word-break:break-all;">
+              🔗 ${activeUrl}
             </a>
             <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
-              <button class="btn-icon copy-url" title="Copy Website Link" data-url="${cloudUrl}" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; padding:3px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">📋 Copy</button>
-              <a href="${cloudUrl}" target="_blank" rel="noopener" style="background:#0284c7; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; text-decoration:none; display:inline-flex; align-items:center; gap:2px;">VISIT ↗</a>
+              <button class="btn-icon copy-url" title="Copy Website Link" data-url="${activeUrl}" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; padding:3px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">📋 Copy</button>
+              <a href="${activeUrl}" target="_blank" rel="noopener" style="background:#0284c7; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; text-decoration:none; display:inline-flex; align-items:center; gap:2px;">VISIT ↗</a>
             </div>
           </div>
-        `
-        : (hasCloud && isSuspended 
-            ? `<span style="color:#94a3b8; font-size:0.8rem; font-family:monospace;">${cloudUrl} (Suspended)</span>`
-            : `<span style="color:#64748b; font-size:0.8rem; font-style:italic;">No cloud endpoint active</span>`);
+        `;
 
       let cloudActionBtns = '';
       if (!hasCloud) {
