@@ -15,9 +15,9 @@ fi
 echo "=== [MANI\$OFT] AUTONOMOUS MULTI-PROJECT FLEET SCANNER & PUBLISHER ==="
 echo "Scanning directory: $PROJECTS_ROOT"
 
-PROJECTS=(lumina passmaster_ai starshine strike_ops subway_surfers aether-transport)
-PORT_MAP=(8080 5050 5000 8081 8082 9090)
-FRAMEWORKS=("Flask / Socket.IO" "Flask / AI Engine" "Flask / Python" "HTML5 / Python HTTP" "HTML5 / Python HTTP" "Rust / Tokio Mesh")
+PROJECTS=(lumina passmaster_ai starshine aether-transport)
+PORT_MAP=(8080 5050 5000 9090)
+FRAMEWORKS=("Flask / Socket.IO" "Flask / AI Engine" "Flask / Python" "Rust / Tokio Mesh")
 
 for i in "${!PROJECTS[@]}"; do
     NAME="${PROJECTS[$i]}"

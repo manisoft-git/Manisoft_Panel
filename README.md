@@ -32,13 +32,13 @@ A production-ready, fault-tolerant, sovereign developer mission control, threat 
                |  - In-Memory WASM Redis RESP Emulator (PORT :6379)          |
                |  - Dedicated UI Web Worker (Zero-Jank 60 FPS Offloading)    |
                +-------------------------------------------------------------+
-                       |              |              |              |
-          +------------+       +------+------+       +-------+      +-------------+
-          |                    |             |               |                    |
-          v                    v             v               v                    v
-      [LUMINA]          [PASSMASTER]    [STARSHINE]    [STRIKE OPS]      [SUBWAY SURFERS]
-     Port :8080          Port :5050     Port :5000      Port :8081          Port :8082
-    Flask/SocketIO       Flask/AI      Flask/Haute     HTML5 Canvas        HTML5 Canvas
+                       |              |              |
+          +------------+       +------+------+       +------------------+
+          |                    |             |                          |
+          v                    v             v                          v
+      [LUMINA]          [PASSMASTER]    [STARSHINE]             [AETHER TRANSPORT]
+     Port :8080          Port :5050     Port :5000                  Port :9090
+    Flask/SocketIO       Flask/AI      Flask/Haute               Rust/Tokio Mesh
 ```
 
 ---

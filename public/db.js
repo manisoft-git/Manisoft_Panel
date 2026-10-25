@@ -20,8 +20,6 @@ export function renderDBDeck(containerEl) {
             <tr><td>lumina</td><td>8080</td><td>configured</td></tr>
             <tr><td>passmaster_ai</td><td>5050</td><td>configured</td></tr>
             <tr><td>starshine</td><td>5000</td><td>configured</td></tr>
-            <tr><td>strike_ops</td><td>8081</td><td>configured</td></tr>
-            <tr><td>subway_surfers</td><td>8082</td><td>configured</td></tr>
           </tbody>
         </table>
       </div>

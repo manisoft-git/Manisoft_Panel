@@ -28,18 +28,6 @@
       "branch": "main",
       "type": "web"
     },
-    "strike_ops": {
-      "repo": "github.com/manisoft-git/strike_ops",
-      "port": 8081,
-      "branch": "main",
-      "type": "web"
-    },
-    "subway_surfers": {
-      "repo": "github.com/manisoft-git/subway_surfers",
-      "port": 8082,
-      "branch": "main",
-      "type": "web"
-    },
     "aether-transport": {
       "repo": "github.com/manisoft-git/aether-transport",
       "port": 9090,

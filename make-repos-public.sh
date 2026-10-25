@@ -22,8 +22,6 @@ REPOS=(
   "Lumina"
   "passmaster_ai"
   "starshine"
-  "strike_ops"
-  "subway_surfers"
   "aether-transport"
   "manisoft-git"
 )

@@ -440,18 +440,6 @@ const FLEET_RENDER_SPECS = {
     buildCommand: "pip install -r requirements.txt 2>/dev/null || true",
     startCommand: "python3 app.py"
   },
-  strike_ops: {
-    repo: "https://github.com/manisoft-git/strike_ops",
-    runtime: "python",
-    buildCommand: "echo Strike Ops ready",
-    startCommand: "python3 server.py"
-  },
-  subway_surfers: {
-    repo: "https://github.com/manisoft-git/subway_surfers",
-    runtime: "python",
-    buildCommand: "echo Subway Surfers ready",
-    startCommand: "python3 server.py"
-  },
   "aether-transport": {
     repo: "https://github.com/manisoft-git/aether-transport",
     runtime: "python",
@@ -1020,7 +1008,7 @@ async function callManiAI(prompt, conversationMode = true, showThinking = true, 
 1. BEFORE TOUCHING, EDITING, OR CREATING FILES in any repository, you MUST ALWAYS run 'git pull --rebase origin <branch>' (or 'git pull origin main') on that repository to fetch and integrate the latest changes.
 2. AFTER ANY CODE MODIFICATIONS OR FILE CHANGES, you MUST IMMEDIATELY stage the modified files, commit them with a concise descriptive message, and run 'git push origin <branch>' to push to remote GitHub.
 Never skip pulling before modifications, and never leave completed changes unpushed.]`;
-    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${runCwd} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, strike_ops, subway_surfers, aether-transport. Always identify yourself as MANI AI.]${gitProtocolInstruction}${thinkingInstruction}\n\n${cleanPrompt}`;
+    const systemIdentity = `[IDENTITY: You are MANI AI, the sovereign autonomous AI coding partner for Manifest Subeno and Mani$oft. You operate inside ${runCwd} with full read, write, edit, and command permissions across all fleet projects: Manisoft_Panel, lumina, passmaster_ai, starshine, aether-transport. Always identify yourself as MANI AI.]${gitProtocolInstruction}${thinkingInstruction}\n\n${cleanPrompt}`;
 
     const args = [
       '-p', systemIdentity,
@@ -1175,8 +1163,6 @@ const server = http.createServer(async (req, res) => {
       lumina: 8080,
       passmaster_ai: 5050,
       starshine: 5000,
-      strike_ops: 8081,
-      subway_surfers: 8082,
       aether_transport: 9090
     };
     const targetPort = portMap[projKey];

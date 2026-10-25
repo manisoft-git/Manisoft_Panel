@@ -4,7 +4,7 @@ export function renderTopologyDeck(containerEl) {
   containerEl.innerHTML = `
     <div class="deck-header-row">
       <h3>SOVEREIGN TOPOLOGY & PORT MATRIX</h3>
-      <span class="pill pill-cyan">5 FLEET APPS + 1 CONTROL PLANE</span>
+      <span class="pill pill-cyan">4 FLEET APPS + 1 CONTROL PLANE</span>
     </div>
     <div class="topology-matrix">
       <div class="topo-node master">
@@ -16,8 +16,7 @@ export function renderTopologyDeck(containerEl) {
         <div class="topo-node">lumina (:8080)</div>
         <div class="topo-node">passmaster_ai (:5050)</div>
         <div class="topo-node">starshine (:5000)</div>
-        <div class="topo-node">strike_ops (:8081)</div>
-        <div class="topo-node">subway_surfers (:8082)</div>
+        <div class="topo-node">aether-transport (:9090)</div>
       </div>
     </div>
   `;

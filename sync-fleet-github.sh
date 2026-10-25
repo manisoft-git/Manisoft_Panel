@@ -8,7 +8,7 @@ PROJECTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "=== [MANI\$OFT] AUTONOMOUS GITHUB FLEET MASS-SYNCHRONIZER ==="
 
-PROJECTS=(Manisoft_Panel lumina passmaster_ai starshine strike_ops subway_surfers aether-transport)
+PROJECTS=(Manisoft_Panel lumina passmaster_ai starshine aether-transport)
 
 for NAME in "${PROJECTS[@]}"; do
     PROJ_DIR="$PROJECTS_ROOT/$NAME"

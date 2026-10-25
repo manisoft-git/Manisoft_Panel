@@ -27,18 +27,6 @@
       "branch": "main",
       "domain": "manisoft-starshine"
     },
-    "strike_ops": {
-      "repo": "manisoft-git/strike_ops",
-      "port": 8081,
-      "branch": "main",
-      "domain": "manisoft-strikeops"
-    },
-    "subway_surfers": {
-      "repo": "manisoft-git/subway_surfers",
-      "port": 8082,
-      "branch": "main",
-      "domain": "manisoft-subway"
-    },
     "aether-transport": {
       "repo": "manisoft-git/aether-transport",
       "port": 9090,

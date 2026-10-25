@@ -138,23 +138,21 @@ SCENES = [
     },
     {
         "title": "THE ECOSYSTEM",
-        "subtitle": "5 Live Projects — 1 Control Panel",
+        "subtitle": "Live Production Fleet — 1 Control Panel",
         "body": [
-            "LUMINA        — Cognitive learning & gaming platform  :8080",
-            "PASSMASTER AI — Socratic JAMB/WAEC exam coach         :5050",
-            "STARSHINE      — Luxury e-commerce storefront          :5000",
-            "STRIKE OPS    — FPS combat game (HTML5 Canvas)         :8081",
-            "SUBWAY SURFERS — Endless runner arcade game            :8082",
+            "LUMINA           — Cognitive learning & gaming platform  :8080",
+            "PASSMASTER AI    — Socratic JAMB/WAEC exam coach         :5050",
+            "STARSHINE         — Luxury e-commerce storefront          :5000",
+            "AETHER TRANSPORT  — High-concurrency mesh transport      :9090",
         ],
         "tags": ["Flask", "Node.js", "HTML5", "SQLite", "Render"],
         "voiceover": (
-            "Manisoft Mission Control orchestrates five live production projects simultaneously. "
+            "Manisoft Mission Control orchestrates the sovereign live production fleet. "
             "Lumina — the cognitive learning and gaming platform. "
             "Passmaster A-I — the Socratic JAMB and WAEC exam coaching engine. "
             "Starshine Steez — a luxury e-commerce storefront. "
-            "Strike Ops — an FPS combat game on the HTML5 Canvas. "
-            "And Subway Surfers — an endless runner arcade. "
-            "All five operate simultaneously, managed from one sovereign control panel."
+            "And Aether Transport — a high-concurrency distributed mesh engine. "
+            "All operate simultaneously, managed from one sovereign control panel."
         ),
     },
     {

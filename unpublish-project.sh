@@ -7,7 +7,7 @@ PROJECT_NAME="${1:-}"
 
 if [ -z "$PROJECT_NAME" ]; then
     echo "Usage: $0 <project-name>"
-    echo "Available projects: lumina, passmaster_ai, starshine, strike_ops, subway_surfers"
+    echo "Available projects: lumina, passmaster_ai, starshine, aether-transport"
     exit 1
 fi
 
@@ -33,8 +33,6 @@ case "$PROJECT_NAME" in
     lumina) pkill -f "lumina" 2>/dev/null || true ;;
     passmaster_ai) pkill -f "passmaster_ai" 2>/dev/null || true ;;
     starshine) pkill -f "starshine" 2>/dev/null || true ;;
-    strike_ops) pkill -f "strike_ops" 2>/dev/null || true ;;
-    subway_surfers) pkill -f "subway_surfers" 2>/dev/null || true ;;
     *) echo "[i] Searching general process table for $PROJECT_NAME..." ;;
 esac
 

@@ -60,8 +60,6 @@ json.dump(cfg, open('$CONFIG_FILE', 'w'), indent=2)
         echo "   • manisoft-git/Lumina          (Port 8080)"
         echo "   • manisoft-git/passmaster_ai   (Port 5050)"
         echo "   • manisoft-git/starshine       (Port 5000)"
-        echo "   • manisoft-git/strike_ops      (Port 8081)"
-        echo "   • manisoft-git/subway_surfers  (Port 8082)"
         echo "   • manisoft-git/aether-transport (Port 9090)"
         echo ""
         echo "4. Generate Free Worldwide Domains:"
@@ -71,8 +69,6 @@ json.dump(cfg, open('$CONFIG_FILE', 'w'), indent=2)
         echo "   • https://manisoft-lumina.zeabur.app"
         echo "   • https://manisoft-passmaster.zeabur.app"
         echo "   • https://manisoft-starshine.zeabur.app"
-        echo "   • https://manisoft-strikeops.zeabur.app"
-        echo "   • https://manisoft-subway.zeabur.app"
         echo "   • https://manisoft-aether.zeabur.app"
         echo "----------------------------------------------------------------------"
         ;;
