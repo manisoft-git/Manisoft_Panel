@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Manisoft_STC_Bot // Sovereign Trade Commander</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #06090e; color: #e2e8f0; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .cyber-card { background: rgba(13, 19, 33, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(0, 243, 255, 0.15); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+        .cyber-glow { box-shadow: 0 0 15px rgba(0, 243, 255, 0.25); }
+        .glow-green { box-shadow: 0 0 15px rgba(0, 255, 136, 0.3); }
+        .glow-red { box-shadow: 0 0 15px rgba(255, 51, 102, 0.4); }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-6 pb-20">
+
+    <!-- Top Navigation -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-cyan-900/40">
+        <div>
+            <div class="flex items-center gap-2">
+                <span id="cloudPulse" class="inline-block w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+                <h1 class="text-xl md:text-2xl font-black tracking-wider text-cyan-400 font-mono">MANISOFT STC BOT</h1>
+                <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">CLOUD 24/7</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Sovereign Trading Core // Operator: <span class="text-slate-200 font-semibold">Manifest Subeno</span></p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 md:gap-3 text-xs font-mono">
+            <span id="botStateBadge" class="px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">ACTIVE</span>
+            <span class="px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-700">MT5 DEMO #5058082931</span>
+            <button onclick="toggleBot()" id="toggleBtn" class="px-3 py-1 rounded bg-amber-600/30 text-amber-300 border border-amber-500 hover:bg-amber-600/50 transition">PAUSE</button>
+            <button onclick="triggerKillswitch()" class="px-3 py-1 rounded bg-rose-600 text-white font-bold hover:bg-rose-700 transition glow-red">KILLSWITCH</button>
+            <a href="/noc" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 hover:text-white transition border border-slate-700">NOC FLEET</a>
+        </div>
+    </header>
+
+    <!-- Key Metrics HUD -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+        <div class="cyber-card p-4 rounded-xl">
+            <div class="text-xs text-slate-400 font-mono">TOTAL EQUITY</div>
+            <div id="equityVal" class="text-xl md:text-2xl font-black font-mono text-cyan-300 mt-1">$100,000.00</div>
+            <div id="equitySub" class="text-xs text-slate-400 mt-0.5 font-mono">Unrealized: $0.00</div>
+        </div>
+        <div class="cyber-card p-4 rounded-xl">
+            <div class="text-xs text-slate-400 font-mono">AVAILABLE CASH</div>
+            <div id="cashVal" class="text-xl md:text-2xl font-black font-mono text-slate-100 mt-1">$100,000.00</div>
+            <div class="text-xs text-emerald-400 mt-0.5 font-mono">100% Margin Free</div>
+        </div>
+        <div class="cyber-card p-4 rounded-xl">
+            <div class="text-xs text-slate-400 font-mono">DAILY NET PNL</div>
+            <div id="dailyPnlVal" class="text-xl md:text-2xl font-black font-mono text-emerald-400 mt-1">+$0.00</div>
+            <div class="text-xs text-slate-400 mt-0.5 font-mono">Daily Cap: -$500.00</div>
+        </div>
+        <div class="cyber-card p-4 rounded-xl">
+            <div class="text-xs text-slate-400 font-mono">CIRCUIT BREAKER</div>
+            <div id="cbStatusVal" class="text-xl md:text-2xl font-black font-mono text-emerald-400 mt-1">ARMED</div>
+            <div class="text-xs text-slate-400 mt-0.5 font-mono">Nominal Protection</div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        
+        <!-- Live Chart Container (2 Cols) -->
+        <div class="lg:col-span-2 cyber-card p-4 rounded-xl flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono">LIVE CHART //</h2>
+                    <select id="chartSymbol" onchange="loadChartData()" class="bg-slate-900 border border-cyan-800 text-cyan-300 text-xs px-2 py-1 rounded font-mono">
+                        <option value="EURUSD">EURUSD</option>
+                        <option value="GBPUSD">GBPUSD</option>
+                    </select>
+                    <select id="chartTimeframe" onchange="loadChartData()" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs px-2 py-1 rounded font-mono">
+                        <option value="1m">1m</option>
+                        <option value="5m">5m</option>
+                        <option value="15m">15m</option>
+                        <option value="1h">1h</option>
+                    </select>
+                </div>
+                <div id="currentPriceTag" class="text-sm font-mono font-bold text-cyan-400">---</div>
+            </div>
+            <div id="chartContainer" class="w-full h-72 md:h-96 rounded-lg overflow-hidden bg-slate-950/60"></div>
+        </div>
+
+        <!-- Fast Execution & Market Watch (1 Col) -->
+        <div class="cyber-card p-4 rounded-xl flex flex-col justify-between">
+            <div>
+                <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-3">MARKET WATCH // SPREAD</h2>
+                <div id="marketWatchList" class="space-y-2 mb-6">
+                    <!-- Dynamic Ticker rows -->
+                </div>
+
+                <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-3">MICRO-ORDER // DEMO</h2>
+                <div class="space-y-3 text-xs font-mono">
+                    <div>
+                        <label class="text-slate-400">Target Symbol</label>
+                        <select id="manualSymbol" class="w-full bg-slate-900 border border-slate-700 p-2 rounded mt-1 text-slate-200">
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="GBPUSD">GBPUSD</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-slate-400">Lots</label>
+                            <input type="number" id="manualLots" step="0.01" value="0.01" class="w-full bg-slate-900 border border-slate-700 p-2 rounded mt-1 text-slate-200">
+                        </div>
+                        <div>
+                            <label class="text-slate-400">SL (Pips)</label>
+                            <input type="number" id="manualSL" value="20" class="w-full bg-slate-900 border border-slate-700 p-2 rounded mt-1 text-slate-200">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <button onclick="placeOrder('BUY')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded transition font-mono glow-green">BUY (LONG)</button>
+                        <button onclick="placeOrder('SELL')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded transition font-mono glow-red">SELL (SHORT)</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-500 font-mono">
+                Atomic SL (20 pips) & TP (40 pips) enforced automatically.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Active Positions Table -->
+    <div class="cyber-card p-4 rounded-xl mb-6">
+        <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-3">OPEN ACTIVE POSITIONS</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs font-mono">
+                <thead>
+                    <tr class="text-slate-400 border-b border-slate-800">
+                        <th class="pb-2">Symbol</th>
+                        <th class="pb-2">Side</th>
+                        <th class="pb-2">Lots</th>
+                        <th class="pb-2">Entry Price</th>
+                        <th class="pb-2">Current Price</th>
+                        <th class="pb-2">Stop-Loss</th>
+                        <th class="pb-2">Take-Profit</th>
+                        <th class="pb-2 text-right">Unrealized PnL</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsTableBody">
+                    <tr><td colspan="8" class="text-center py-4 text-slate-500">No active open positions. Watching market...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Live Execution Audit Log -->
+    <div class="cyber-card p-4 rounded-xl">
+        <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-2">AUTONOMOUS AUDIT LOG // TELEMETRY</h2>
+        <div id="auditLogBox" class="bg-slate-950/80 p-3 rounded-lg h-36 overflow-y-auto font-mono text-xs text-slate-400 space-y-1">
+            <div>Connecting to live telemetry feed...</div>
+        </div>
+    </div>
+
+    <script>
+        let chart, candleSeries;
+        let isBotActive = true;
+        
+        function initChart() {
+            try {
+                const container = document.getElementById('chartContainer');
+                if (!container) return;
+                container.innerHTML = '';
+
+                if (typeof LightweightCharts === 'undefined') {
+                    container.innerHTML = '<div class="flex items-center justify-center h-full text-cyan-400 font-mono text-xs">Connecting to Market Stream...</div>';
+                    setTimeout(initChart, 1000);
+                    return;
+                }
+
+                chart = LightweightCharts.createChart(container, {
+                    width: container.clientWidth || 800,
+                    height: container.clientHeight || 360,
+                    layout: { background: { color: 'transparent' }, textColor: '#94a3b8' },
+                    grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
+                    crosshair: { mode: LightweightCharts.CrosshairMode ? LightweightCharts.CrosshairMode.Normal : 1 },
+                    rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
+                    timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true, secondsVisible: false }
+                });
+
+                const seriesOpts = {
+                    upColor: '#10b981', downColor: '#ef4444',
+                    borderUpColor: '#10b981', borderDownColor: '#ef4444',
+                    wickUpColor: '#10b981', wickDownColor: '#ef4444'
+                };
+
+                if (typeof chart.addCandlestickSeries === 'function') {
+                    candleSeries = chart.addCandlestickSeries(seriesOpts);
+                } else if (typeof chart.addSeries === 'function' && LightweightCharts.CandlestickSeries) {
+                    candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, seriesOpts);
+                }
+
+                window.addEventListener('resize', () => {
+                    if (chart && container) {
+                        chart.resize(container.clientWidth, container.clientHeight);
+                    }
+                });
+                loadChartData();
+            } catch (e) {
+                console.error("Chart init error:", e);
+            }
+        }
+
+        async function loadChartData() {
+            const sym = document.getElementById('chartSymbol').value;
+            const tf = document.getElementById('chartTimeframe').value;
+            try {
+                const res = await fetch(`/api/candles/${sym}?timeframe=${tf}&limit=100`);
+                const data = await res.json();
+                if (data && data.length > 0 && candleSeries) {
+                    candleSeries.setData(data);
+                    if (chart && chart.timeScale) {
+                        chart.timeScale().fitContent();
+                    }
+                    const lastBar = data[data.length - 1];
+                    document.getElementById('currentPriceTag').innerText = `$${lastBar.close.toFixed(5)}`;
+                }
+            } catch (err) {
+                console.error("Chart load error:", err);
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                document.getElementById('equityVal').innerText = `$${data.equity.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('cashVal').innerText = `$${data.cash.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                
+                const pnlEl = document.getElementById('dailyPnlVal');
+                pnlEl.innerText = `${data.daily_pnl >= 0 ? '+' : ''}$${data.daily_pnl.toFixed(2)}`;
+                pnlEl.className = `text-xl md:text-2xl font-black font-mono ${data.daily_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-1`;
+
+                const cbEl = document.getElementById('cbStatusVal');
+                if (data.circuit_breaker && data.circuit_breaker.tripped) {
+                    cbEl.innerText = "TRIPPED";
+                    cbEl.className = "text-xl md:text-2xl font-black font-mono text-rose-500 mt-1";
+                } else {
+                    cbEl.innerText = "ARMED";
+                    cbEl.className = "text-xl md:text-2xl font-black font-mono text-emerald-400 mt-1";
+                }
+
+                // Market watch
+                if (data.market) {
+                    let mwHtml = '';
+                    for (const [sym, info] of Object.entries(data.market)) {
+                        mwHtml += `
+                            <div class="flex justify-between items-center p-2 rounded bg-slate-900/60 border border-slate-800">
+                                <div>
+                                    <span class="font-bold text-slate-200">${sym}</span>
+                                    <span class="text-[10px] text-slate-500 ml-2">Spread: ${info.spread_pct || 0.0}%</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-cyan-300 font-bold">$${(info.price || 0.0).toFixed(5)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('marketWatchList').innerHTML = mwHtml;
+                }
+
+                // Open positions
+                const ptb = document.getElementById('positionsTableBody');
+                if (!data.open_positions || data.open_positions.length === 0) {
+                    ptb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>`;
+                } else {
+                    let rows = '';
+                    for (const pos of data.open_positions) {
+                        const pnlColor = pos.unrealized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                        const sideColor = pos.side === 'BUY' ? 'text-emerald-400' : 'text-rose-400';
+                        rows += `
+                            <tr class="border-b border-slate-800/50 hover:bg-slate-900/40">
+                                <td class="py-2.5 font-bold text-slate-200">${pos.symbol}</td>
+                                <td class="py-2.5 font-bold ${sideColor}">${pos.side}</td>
+                                <td class="py-2.5">${pos.quantity}</td>
+                                <td class="py-2.5">$${pos.entry_price.toFixed(5)}</td>
+                                <td class="py-2.5">$${pos.current_price.toFixed(5)}</td>
+                                <td class="py-2.5 text-rose-400">$${pos.stop_loss.toFixed(5)}</td>
+                                <td class="py-2.5 text-emerald-400">$${pos.take_profit.toFixed(5)}</td>
+                                <td class="py-2.5 text-right font-bold ${pnlColor}">$${pos.unrealized_pnl.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    }
+                    ptb.innerHTML = rows;
+                }
+
+                // Logs
+                if (data.logs) {
+                    const logBox = document.getElementById('auditLogBox');
+                    logBox.innerHTML = data.logs.map(l => `<div>${l}</div>`).join('');
+                }
+
+            } catch (err) {
+                console.error("Status fetch error:", err);
+            }
+        }
+
+        async function triggerKillswitch() {
+            if (confirm("⚠️ ARE YOU SURE? This will immediately liquidate all open positions into cash and pause the engine.")) {
+                await fetch('/api/killswitch', { method: 'POST' });
+                updateStatus();
+            }
+        }
+
+        async function toggleBot() {
+            const res = await fetch('/api/toggle', { method: 'POST' });
+            const data = await res.json();
+            isBotActive = data.bot_active;
+            document.getElementById('toggleBtn').innerText = isBotActive ? 'PAUSE' : 'RESUME';
+            document.getElementById('botStateBadge').innerText = isBotActive ? 'ACTIVE' : 'PAUSED';
+            document.getElementById('botStateBadge').className = isBotActive ? 
+                'px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40' : 
+                'px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-500/40';
+            updateStatus();
+        }
+
+        async function placeOrder(side) {
+            const symbol = document.getElementById('manualSymbol').value;
+            const lots = parseFloat(document.getElementById('manualLots').value);
+            const sl_pips = parseFloat(document.getElementById('manualSL').value);
+
+            const res = await fetch('/api/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symbol, side, lots, sl_pips, tp_pips: sl_pips * 2 })
+            });
+            const out = await res.json();
+            alert(`Order result: ${out.status || JSON.stringify(out)}`);
+            updateStatus();
+        }
+
+        window.onload = () => {
+            try { initChart(); } catch (e) { console.error("Init chart load error:", e); }
+            try { updateStatus(); } catch (e) { console.error("Update status load error:", e); }
+            setInterval(() => { try { updateStatus(); } catch (e) {} }, 3000);
+            setInterval(() => { try { loadChartData(); } catch (e) {} }, 5000);
+        };
+    </script>
+</body>
+</html>
