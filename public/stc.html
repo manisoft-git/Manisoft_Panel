@@ -66,6 +66,7 @@
                 <button onclick="saveGlobalLotSize()" class="px-2 py-0.5 rounded bg-cyan-700/50 hover:bg-cyan-600 text-cyan-200 hover:text-white font-bold text-xs border border-cyan-500/50 transition">SET</button>
             </div>
 
+            <a href="/stc-slides.html" target="_blank" class="px-3 py-1 rounded bg-purple-600/30 text-purple-300 border border-purple-500 hover:bg-purple-600/50 transition" title="Open colorful master operator slides for Dad">🎓 OPERATOR SLIDES</a>
             <button onclick="openAssetsModal()" id="assetsBtn" class="px-3 py-1 rounded bg-indigo-600/30 text-indigo-300 border border-indigo-500 hover:bg-indigo-600/50 transition">COMMODITIES</button>
             <button onclick="openAccountModal()" id="accountLoginBtn" class="px-3 py-1 rounded bg-cyan-600/30 text-cyan-300 border border-cyan-500 hover:bg-cyan-600/50 transition">ACCOUNTS VAULT</button>
             <button onclick="logoutAccount()" id="accountLogoutBtn" class="px-3 py-1 rounded bg-slate-800 text-slate-400 border border-slate-600 hover:bg-rose-900/40 hover:text-rose-300 hover:border-rose-500 transition">LOGOUT</button>
@@ -923,7 +924,7 @@
                             : 'bg-slate-900 text-slate-300 border border-slate-700');
 
                     html += `
-                        <div class="p-2.5 rounded bg-slate-950 border ${is100 ? 'border-emerald-900/60' : 'border-slate-800/80'} hover:border-cyan-800/60 transition flex flex-col justify-between gap-1.5">
+                        <div class="p-3 rounded-lg bg-slate-950 border ${is100 ? 'border-emerald-900/60' : 'border-slate-800/80'} hover:border-cyan-800/60 transition flex flex-col justify-between gap-2 shadow-sm">
                             <div class="flex justify-between items-start gap-2">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-1.5 flex-wrap">
@@ -947,6 +948,43 @@
                                     </select>
                                     <input type="checkbox" ${st.active ? 'checked' : ''} onchange="toggleStrategy('${folder}', '${st.name}', this.checked)" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0 cursor-pointer" title="Toggle active/inactive">
                                 </div>
+                            </div>
+
+                            <!-- Take Profit and Stop Loss Risk Controls -->
+                            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-900 text-[10px] font-mono">
+                                <div class="flex items-center gap-2">
+                                    <!-- Stop Loss Input -->
+                                    <div class="flex items-center gap-1 bg-slate-900/90 px-2 py-0.5 rounded border border-rose-900/50">
+                                        <span class="text-rose-400 font-bold">SL:</span>
+                                        <input type="number" id="sl_${st.id}" min="1" step="1" value="${st.sl_pips || 25}" 
+                                               oninput="updateLiveRR('${st.id}')"
+                                               class="w-12 bg-slate-950 border border-rose-800/60 rounded px-1 py-0.5 text-rose-300 font-bold text-center text-[10px] focus:outline-none focus:border-rose-400"
+                                               title="Stop Loss in Pips for this strategy" />
+                                        <span class="text-slate-500 text-[9px]">pips</span>
+                                    </div>
+
+                                    <!-- Take Profit Input -->
+                                    <div class="flex items-center gap-1 bg-slate-900/90 px-2 py-0.5 rounded border border-emerald-900/50">
+                                        <span class="text-emerald-400 font-bold">TP:</span>
+                                        <input type="number" id="tp_${st.id}" min="1" step="1" value="${st.tp_pips || 50}" 
+                                               oninput="updateLiveRR('${st.id}')"
+                                               class="w-12 bg-slate-950 border border-emerald-800/60 rounded px-1 py-0.5 text-emerald-300 font-bold text-center text-[10px] focus:outline-none focus:border-emerald-400"
+                                               title="Take Profit in Pips for this strategy" />
+                                        <span class="text-slate-500 text-[9px]">pips</span>
+                                    </div>
+                                    
+                                    <!-- R:R Live Ratio Badge -->
+                                    <span class="text-[9px] text-cyan-400/90 bg-cyan-950/70 px-1.5 py-0.5 rounded border border-cyan-800/60" id="rr_${st.id}">
+                                        1:${st.target_rr ? st.target_rr : (st.tp_pips && st.sl_pips ? (st.tp_pips / st.sl_pips).toFixed(1) : '2.0')}R
+                                    </span>
+                                </div>
+
+                                <button onclick="saveStrategyRisk('${st.name}', '${st.id}')" 
+                                        id="saveRiskBtn_${st.id}"
+                                        class="px-2.5 py-1 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 hover:border-cyan-500 font-bold text-[10px] transition cursor-pointer active:scale-95 shadow-sm"
+                                        title="Save updated SL and TP for this strategy">
+                                    SAVE SL/TP
+                                </button>
                             </div>
                         </div>
                     `;
@@ -1015,6 +1053,59 @@
             }
         }
 
+                function updateLiveRR(id) {
+            const slInput = document.getElementById('sl_' + id);
+            const tpInput = document.getElementById('tp_' + id);
+            const rrBadge = document.getElementById('rr_' + id);
+            if (!slInput || !tpInput || !rrBadge) return;
+            const sl = parseFloat(slInput.value);
+            const tp = parseFloat(tpInput.value);
+            if (sl > 0 && tp > 0) {
+                rrBadge.innerText = `1:${(tp / sl).toFixed(1)}R`;
+            }
+        }
+
+        async function saveStrategyRisk(name, id) {
+            const slInput = document.getElementById('sl_' + id);
+            const tpInput = document.getElementById('tp_' + id);
+            const btn = document.getElementById('saveRiskBtn_' + id);
+            const sl = parseFloat(slInput ? slInput.value : 0);
+            const tp = parseFloat(tpInput ? tpInput.value : 0);
+
+            if (isNaN(sl) || sl <= 0 || isNaN(tp) || tp <= 0) {
+                alert("Please enter valid Stop Loss and Take Profit values greater than 0.");
+                return;
+            }
+
+            if (btn) btn.innerText = 'SAVING...';
+
+            try {
+                const res = await fetch('/api/strategies/risk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        sl_pips: sl,
+                        tp_pips: tp,
+                        target_rr: parseFloat((tp / sl).toFixed(2))
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    if (btn) btn.innerText = '✓ SAVED';
+                    setTimeout(() => { if (btn) btn.innerText = 'SAVE SL/TP'; }, 1500);
+                    await loadStrategies();
+                    updateStatus();
+                } else {
+                    alert('Failed to save SL/TP: ' + (data.error || data.message || 'Unauthorized'));
+                    if (btn) btn.innerText = 'SAVE SL/TP';
+                }
+            } catch (e) {
+                alert("Risk update error: " + e.message);
+                if (btn) btn.innerText = 'SAVE SL/TP';
+            }
+        }
+
         async function applyBestBet(folder) {
             const btn = document.getElementById(`bestBetBtn_${folder}`);
             const originalHtml = btn ? btn.innerHTML : '';
@@ -1033,13 +1124,25 @@
                     await loadStrategies();
                     await loadAssetsCatalog();
                     updateStatus();
-                    alert(`⚡ BEST BET CALIBRATED FOR ${folder}!\n\n` + 
-                          `All ${data.applied_count} strategies have been automatically armed at their mathematically optimal 100% / High-Win-Rate timeframes and parameters:\n\n` +
-                          data.strategies.map(s => `• ${s.name} → [${s.timeframe.toUpperCase()}]`).join('\n') +
-                          (data.active_symbols ? `\n\nActive Commodities & Assets: ${data.active_symbols.join(', ')}` : '')
-                    );
+                    const lines = [
+                        '⚡ BEST BET CALIBRATED FOR ' + folder + '!',
+                        '',
+                        'All ' + (data.applied_count || '') + ' strategies have been automatically armed & reset to their mathematically proven highest win-rate settings:',
+                        ''
+                    ];
+                    if (Array.isArray(data.strategies)) {
+                        for (const s of data.strategies) {
+                            lines.push('• ' + s.name);
+                            lines.push('  └─ Timeframe: [' + String(s.timeframe || '').toUpperCase() + '] | SL: ' + s.sl_pips + ' pips | TP: ' + s.tp_pips + ' pips (1:' + s.target_rr + 'R)');
+                        }
+                    }
+                    if (data.active_symbols && data.active_symbols.length > 0) {
+                        lines.push('');
+                        lines.push('Active Commodities & Assets: ' + data.active_symbols.join(', '));
+                    }
+                    alert(lines.join('\n'));
                 } else {
-                    alert(`Error applying Best Bet: ${data.detail || JSON.stringify(data)}`);
+                    alert(`Error applying Best Bet: ${data.error || data.detail || JSON.stringify(data)}`);
                 }
             } catch (err) {
                 alert(`Best Bet failed: ${err.message}`);
@@ -1873,4 +1976,39 @@
         };
     </script>
 </body>
-</html>
+</htmlupdateStatus();
+                    const lines = [
+                        ⚡ BEST BET CALIBRATED FOR !,
+                        '',
+                        All  strategies have been automatically armed & reset to their mathematically proven highest win-rate settings:,
+                        ''
+                    ];
+                    if (Array.isArray(data.strategies)) {
+                        for (const s of data.strategies) {
+                            lines.push(• );
+                            lines.push(  └─ Timeframe: [] | SL:  pips | TP:  pips (1:R));
+                        }
+                    }
+                    if (data.active_symbols && data.active_symbols.length > 0) {
+                        lines.push('');
+                        lines.push(Active Commodities & Assets: );
+                    }
+                    alert(lines.join('\n'));
+                const lines = [
+                        ⚡ BEST BET CALIBRATED FOR !,
+                        '',
+                        All  strategies have been automatically armed & reset to their mathematically proven highest win-rate settings:,
+                        ''
+                    ];
+                    if (Array.isArray(data.strategies)) {
+                        for (const s of data.strategies) {
+                            lines.push(• );
+                            lines.push(  └─ Timeframe: [] | SL:  pips | TP:  pips (1:R));
+                        }
+                    }
+                    if (data.active_symbols && data.active_symbols.length > 0) {
+                        lines.push('');
+                        lines.push(Active Commodities & Assets: );
+                    }
+                    alert(lines.join('\n'));
+                >

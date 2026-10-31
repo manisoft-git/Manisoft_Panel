@@ -32,7 +32,69 @@
           "manisoft_session_breakout",
           "manisoft_alpha_router",
           "manisoft_basis_arbitrage"
-        ]
+        ],
+        "strategy_risk": {
+          "manisoft_trend_rider": {
+            "sl_pips": 30,
+            "tp_pips": 60,
+            "target_rr": 2
+          },
+          "adam_k_trend_pullback": {
+            "sl_pips": 30,
+            "tp_pips": 60,
+            "target_rr": 2
+          },
+          "adam_k_divergence_reversal": {
+            "sl_pips": 35,
+            "tp_pips": 70,
+            "target_rr": 2
+          },
+          "adam_k_range_bounce": {
+            "sl_pips": 25,
+            "tp_pips": 50,
+            "target_rr": 2
+          },
+          "adam_k_consolidation_breakout": {
+            "sl_pips": 20,
+            "tp_pips": 40,
+            "target_rr": 2
+          },
+          "adam_k_fibonacci_confluence": {
+            "sl_pips": 30,
+            "tp_pips": 60,
+            "target_rr": 2
+          },
+          "manisoft_fvg_imbalance": {
+            "sl_pips": 25,
+            "tp_pips": 50,
+            "target_rr": 2
+          },
+          "manisoft_mean_reversion_zscore": {
+            "sl_pips": 20,
+            "tp_pips": 30,
+            "target_rr": 1.5
+          },
+          "manisoft_liquidity_sweep": {
+            "sl_pips": 15,
+            "tp_pips": 30,
+            "target_rr": 2
+          },
+          "manisoft_session_breakout": {
+            "sl_pips": 25,
+            "tp_pips": 40,
+            "target_rr": 1.6
+          },
+          "manisoft_alpha_router": {
+            "sl_pips": 25,
+            "tp_pips": 50,
+            "target_rr": 2
+          },
+          "manisoft_basis_arbitrage": {
+            "sl_pips": 10,
+            "tp_pips": 20,
+            "target_rr": 2
+          }
+        }
       },
       "is_active": true,
       "display_id": "#5058082931",
