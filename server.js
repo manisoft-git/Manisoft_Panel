@@ -1930,14 +1930,8 @@ const server = http.createServer(async (req, res) => {
         const data = JSON.parse(body);
         const pass = (data.password || '').trim();
         if (pass === '$$manisoft11stc' || pass === '$$manisoft11console' || isAuthorizedPassSeed(pass)) {
-          const sessionToken = generateSessionToken();
-          activeSessionsMap.set(sessionToken, {
-            email: AUTHORIZED_EMAIL,
-            role: 'sovereign_operator',
-            createdAt: Date.now(),
-            expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
-          });
-          saveSessions();
+          const sessionToken = crypto.randomBytes(32).toString('hex');
+          registerSession(sessionToken, { email: AUTHORIZED_EMAIL, clientIP });
           addStcLog('🔐 Sovereign Operator unlocked Mission Control via Master Password.');
           return sendJSON(res, { success: true, token: sessionToken });
         } else {
