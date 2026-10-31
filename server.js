@@ -2358,12 +2358,13 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/api/strategies/risk' && req.method === 'POST') {
     const body = await parseBody(req);
-    const { name, sl_pips, tp_pips, target_rr } = body;
+    const targetIdentifier = body.name || body.strategy_id || body.id;
+    const { sl_pips, tp_pips, target_rr } = body;
     let found = false;
     let targetStrategy = null;
     for (const folder of Object.values(stcStrategies)) {
       for (const s of folder) {
-        if (s.name === name || s.id === name) {
+        if (s.name === targetIdentifier || s.id === targetIdentifier) {
           if (sl_pips != null && !isNaN(parseFloat(sl_pips)) && parseFloat(sl_pips) > 0) {
             s.sl_pips = parseFloat(sl_pips);
           }
