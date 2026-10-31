@@ -60,11 +60,87 @@ void OnTimer()
    // 1. Process any pending orders queued from the Cloud Mission Control
    PollPendingOrders();
 
-   // 2. Sync account balance, equity, and live positions every 4 seconds (uses TimeLocal for 24/7 weekend continuity)
+   // 2. Continuous Smart Dynamic Ratchet Trailing SL (15p Initial, 10p trigger, 50% lock)
+   ManageSmartTrailingRatchet();
+
+   // 3. Sync account balance, equity, and live positions every 4 seconds (uses TimeLocal for 24/7 weekend continuity)
    if(TimeLocal() - ExtLastSyncTime >= 4)
    {
       SyncTelemetry();
       ExtLastSyncTime = TimeLocal();
+   }
+}
+
+//+------------------------------------------------------------------+
+//| High-Water Mark Smart Trailing Ratchet Manager                   |
+//| Rules:                                                           |
+//| 1. Initial Stop Loss at 15 pips                                  |
+//| 2. At +10 pips profit, shifts SL to lock in +5 pips (50% lock)  |
+//| 3. Progressively ratchets SL to lock 50% of peak gained pips     |
+//| 4. Strictly monotonic: SL never loosens on profit pullback       |
+//+------------------------------------------------------------------+
+void ManageSmartTrailingRatchet()
+{
+   int totalPos = PositionsTotal();
+   for(int i = 0; i < totalPos; i++)
+   {
+      if(ExtPosition.SelectByIndex(i))
+      {
+         ulong ticket     = ExtPosition.Ticket();
+         string sym       = ExtPosition.Symbol();
+         long posType     = ExtPosition.PositionType();
+         double openPrice = ExtPosition.PriceOpen();
+         double currPrice = ExtPosition.PriceCurrent();
+         double sl        = ExtPosition.StopLoss();
+         double tp        = ExtPosition.TakeProfit();
+         int digits       = (int)SymbolInfoInteger(sym, SYMBOL_DIGITS);
+
+         double pipSize = 0.0001;
+         if(StringFind(sym, "XAU") >= 0 || StringFind(sym, "GOLD") >= 0) pipSize = 0.10;
+         else if(StringFind(sym, "XAG") >= 0 || StringFind(sym, "SILVER") >= 0) pipSize = 0.01;
+         else if(StringFind(sym, "WTI") >= 0 || StringFind(sym, "OIL") >= 0 || StringFind(sym, "CRUDE") >= 0) pipSize = 0.01;
+         else if(StringFind(sym, "JPY") >= 0) pipSize = 0.01;
+         else if(digits == 3 || digits == 5) pipSize = 10.0 * SymbolInfoDouble(sym, SYMBOL_POINT);
+
+         double profitPips = 0.0;
+         if(posType == POSITION_TYPE_BUY)
+            profitPips = (currPrice - openPrice) / pipSize;
+         else if(posType == POSITION_TYPE_SELL)
+            profitPips = (openPrice - currPrice) / pipSize;
+
+         // Trigger at 10 pips profit
+         if(profitPips >= 10.0)
+         {
+            double lockPips = profitPips * 0.5; // lock half of peak gain
+            double targetSl = 0.0;
+            bool shouldModify = false;
+
+            if(posType == POSITION_TYPE_BUY)
+            {
+               targetSl = NormalizeDouble(openPrice + (lockPips * pipSize), digits);
+               if(sl <= 0 || targetSl > (sl + (0.5 * pipSize)))
+               {
+                  shouldModify = true;
+               }
+            }
+            else if(posType == POSITION_TYPE_SELL)
+            {
+               targetSl = NormalizeDouble(openPrice - (lockPips * pipSize), digits);
+               if(sl <= 0 || targetSl < (sl - (0.5 * pipSize)))
+               {
+                  shouldModify = true;
+               }
+            }
+
+            if(shouldModify)
+            {
+               if(ExtTrade.PositionModify(ticket, targetSl, tp))
+               {
+                  PrintFormat("🛡️ [SMART RATCHET ARMED] Ticket #%I64d (%s) Ratcheted SL to %.5f (+%.1f pips locked)", ticket, sym, targetSl, lockPips);
+               }
+            }
+         }
+      }
    }
 }
 
@@ -191,6 +267,26 @@ void ExecuteSingleOrder(const string &block)
    double volume  = ExtractJsonDouble(block, "volume");
    double sl      = ExtractJsonDouble(block, "sl");
    double tp      = ExtractJsonDouble(block, "tp");
+
+   if(action == "MODIFY_SL")
+   {
+      ulong modTicket = (ulong)ExtractJsonDouble(block, "ticket");
+      if(modTicket > 0 && sl > 0)
+      {
+         bool modOk = ExtTrade.PositionModify(modTicket, sl, tp);
+         if(modOk)
+         {
+            PrintFormat("🛡️ [RATCHET MODIFIED] Ticket #%I64d New SL: %.5f", modTicket, sl);
+            ReportFilled(orderId, modTicket, "MODIFIED_SL", sl);
+         }
+         else
+         {
+            PrintFormat("⚠️ [RATCHET FAILED] Ticket #%I64d: %s", modTicket, ExtTrade.ResultRetcodeDescription());
+            ReportFilled(orderId, modTicket, "MODIFY_FAILED", sl);
+         }
+      }
+      return;
+   }
 
    if(orderId == "" || action == "" || symbol == "" || volume <= 0) return;
 
