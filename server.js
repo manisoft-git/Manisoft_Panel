@@ -2306,6 +2306,8 @@ const server = http.createServer(async (req, res) => {
     pathname.startsWith('/api/candles') ||
     pathname.startsWith('/api/bridge') ||
     (req.method === 'GET' && (
+      pathname === '/api/stc/status' ||
+      pathname.startsWith('/api/trades') ||
       pathname === '/api/strategies' ||
       pathname === '/api/assets' ||
       pathname === '/api/accounts' ||
