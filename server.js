@@ -1900,18 +1900,10 @@ const server = http.createServer(async (req, res) => {
   // (public exceptions: /api/models — non-sensitive model list)
   // ----------------------------------------------------------------------------
   const isStcPublicEndpoint = (
+    pathname === '/api/stc/login' ||
     pathname === '/api/models' ||
     pathname === '/api/status' ||
     pathname.startsWith('/api/candles') ||
-    pathname.startsWith('/api/strategies') ||
-    pathname.startsWith('/api/assets') ||
-    pathname.startsWith('/api/commodity') ||
-    pathname.startsWith('/api/accounts') ||
-    pathname.startsWith('/api/account') ||
-    pathname === '/api/lotsize' ||
-    pathname === '/api/toggle' ||
-    pathname === '/api/killswitch' ||
-    pathname === '/api/order' ||
     pathname.startsWith('/api/bridge')
   );
 
