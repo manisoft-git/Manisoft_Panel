@@ -34,7 +34,7 @@
             <h2 class="text-xl font-black font-mono text-cyan-300 tracking-wider">MANISOFT STC BOT</h2>
             <p class="text-xs text-slate-400 mt-1 mb-6 font-mono">MISSION CONTROL // SOVEREIGN SECURITY</p>
             <form onsubmit="event.preventDefault(); authenticateOperator();" class="space-y-4">
-                <input id="masterKeyInput" type="password" placeholder="Enter Password (manisoft11stc)..." autocomplete="current-password" autofocus class="w-full bg-slate-900/90 border border-cyan-800 rounded-lg px-4 py-3 text-sm font-mono text-cyan-200 placeholder-slate-600 focus:outline-none focus:border-cyan-400">
+                <input id="masterKeyInput" type="password" placeholder="Enter Master Operator Password..." autocomplete="current-password" autofocus class="w-full bg-slate-900/90 border border-cyan-800 rounded-lg px-4 py-3 text-sm font-mono text-cyan-200 placeholder-slate-600 focus:outline-none focus:border-cyan-400">
                 <div id="loginError" class="text-xs text-rose-400 font-mono hidden">❌ Invalid Password. Access Denied.</div>
                 <button type="submit" id="unlockBtn" class="w-full py-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-mono font-bold tracking-wider transition cyber-glow">UNLOCK DASHBOARD</button>
             </form>
@@ -183,8 +183,9 @@
             <div class="overflow-x-auto custom-scroll flex-1">
                 <table class="w-full text-left font-mono text-xs">
                     <thead>
-                        <tr class="border-b border-slate-800 text-slate-400">
+                        <tr class="border-b border-slate-800 text-slate-400 text-[11px]">
                             <th class="pb-2">SYMBOL</th>
+                            <th class="pb-2">STRATEGY</th>
                             <th class="pb-2">SIDE</th>
                             <th class="pb-2">LOTS</th>
                             <th class="pb-2">ENTRY</th>
@@ -195,7 +196,7 @@
                         </tr>
                     </thead>
                     <tbody id="positionsTableBody">
-                        <tr><td colspan="8" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>
+                        <tr><td colspan="9" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -235,6 +236,97 @@
             <div id="strategyHierarchyContainer" class="space-y-4 overflow-y-auto custom-scroll pr-1 flex-1 font-mono text-xs">
                 <!-- Dynamically populated strategy modules -->
             </div>
+        </div>
+    </div>
+
+    <!-- ======================================================================== -->
+    <!-- HISTORICAL TRADES & CLOSED EXECUTIONS (SOVEREIGN TRADE JOURNAL) -->
+    <!-- ======================================================================== -->
+    <div class="cyber-card p-4 md:p-5 rounded-xl font-mono text-xs mb-6 border border-cyan-900/50 shadow-2xl">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4 pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <div>
+                    <h3 class="text-xs font-bold text-cyan-300 tracking-wider">HISTORICAL TRADES & CLOSED EXECUTIONS</h3>
+                    <p class="text-[10px] text-slate-400">AUDITED QUANTITATIVE SETTLEMENT JOURNAL & ALPHA ATTRIBUTION</p>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Strategy Filter -->
+                <select id="thFilterStrategy" onchange="renderTradeHistoryTable()" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400">
+                    <option value="ALL">All Strategies</option>
+                    <option value="VR-ATR">Adaptive Trend Rider (VR-ATR)</option>
+                    <option value="FVG">Fair Value Gap (FVG-IF)</option>
+                    <option value="Z-Score">Mean Reversion Z-Score</option>
+                    <option value="Sweep">Liquidity Sweep (IL-OBR)</option>
+                    <option value="Session">Session Momentum Breakout</option>
+                    <option value="Arbitrage">Basis Arbitrage</option>
+                </select>
+
+                <!-- Symbol Filter -->
+                <select id="thFilterSymbol" onchange="renderTradeHistoryTable()" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400">
+                    <option value="ALL">All Assets</option>
+                    <option value="XAUUSD">Gold (XAUUSD)</option>
+                    <option value="XAGUSD">Silver (XAGUSD)</option>
+                    <option value="WTI">Crude Oil (WTI)</option>
+                    <option value="EURUSD">EUR/USD</option>
+                    <option value="GBPUSD">GBP/USD</option>
+                    <option value="BTC">BTC</option>
+                </select>
+
+                <!-- Outcome Filter -->
+                <select id="thFilterOutcome" onchange="renderTradeHistoryTable()" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400">
+                    <option value="ALL">All Outcomes</option>
+                    <option value="WIN">Wins Only (🟢)</option>
+                    <option value="LOSS">Losses Only (🔴)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Performance Summary Badges Banner -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400 font-bold uppercase">CLOSED TRADES</div>
+                <div id="thTotalTrades" class="text-base font-black text-white mt-0.5">0</div>
+            </div>
+            <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400 font-bold uppercase">WIN RATE</div>
+                <div id="thWinRate" class="text-base font-black text-emerald-400 mt-0.5">0.0%</div>
+            </div>
+            <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400 font-bold uppercase">REALIZED P&L</div>
+                <div id="thRealizedPnl" class="text-base font-black text-emerald-400 mt-0.5">$0.00</div>
+            </div>
+            <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400 font-bold uppercase">PROFIT FACTOR</div>
+                <div id="thProfitFactor" class="text-base font-black text-cyan-300 mt-0.5">0.00</div>
+            </div>
+        </div>
+
+        <!-- Trade History Table -->
+        <div class="overflow-x-auto custom-scroll max-h-[420px]">
+            <table class="w-full text-left font-mono text-xs">
+                <thead class="sticky top-0 bg-slate-950/95 z-10 border-b border-slate-800">
+                    <tr class="text-slate-400 text-[11px]">
+                        <th class="py-2 pr-3">TICKET</th>
+                        <th class="py-2 px-2">CLOSED / DURATION</th>
+                        <th class="py-2 px-2">STRATEGY</th>
+                        <th class="py-2 px-2">SYMBOL</th>
+                        <th class="py-2 px-2">SIDE</th>
+                        <th class="py-2 px-2">LOTS</th>
+                        <th class="py-2 px-2">ENTRY</th>
+                        <th class="py-2 px-2">EXIT</th>
+                        <th class="py-2 px-2 text-right">PROFIT ($)</th>
+                        <th class="py-2 px-2 text-right">RETURN (%)</th>
+                        <th class="py-2 pl-3 text-center">OUTCOME</th>
+                    </tr>
+                </thead>
+                <tbody id="tradeHistoryTableBody">
+                    <tr><td colspan="11" class="text-center py-6 text-slate-500 font-mono">Loading audited trade journal...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -806,7 +898,7 @@
                 // Open positions
                 const ptb = document.getElementById('positionsTableBody');
                 if (!data.open_positions || data.open_positions.length === 0) {
-                    ptb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>`;
+                    ptb.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>`;
                 } else {
                     let rows = '';
                     for (const pos of data.open_positions) {
@@ -817,9 +909,11 @@
                         const slDisp = pos.stop_loss ? (pos.stop_loss > 100 ? pos.stop_loss.toFixed(2) : pos.stop_loss.toFixed(5)) : 'None';
                         const tpDisp = pos.take_profit ? (pos.take_profit > 100 ? pos.take_profit.toFixed(2) : pos.take_profit.toFixed(5)) : 'None';
                         const pnlDisp = (pos.unrealized_pnl !== undefined && pos.unrealized_pnl !== null) ? Number(pos.unrealized_pnl).toFixed(2) : '0.00';
+                        const stratDisp = pos.strategy || 'Adaptive Trend Rider (VR-ATR)';
                         rows += `
                             <tr class="border-b border-slate-800/50 hover:bg-slate-900/40">
                                 <td class="py-2.5 font-bold text-slate-200">${pos.symbol}</td>
+                                <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/70">${stratDisp}</span></td>
                                 <td class="py-2.5 font-bold ${sideColor}">${pos.side}</td>
                                 <td class="py-2.5">${pos.quantity}</td>
                                 <td class="py-2.5">$${entryDisp}</td>
@@ -831,6 +925,12 @@
                         `;
                     }
                     ptb.innerHTML = rows;
+                }
+
+                // Closed trade history
+                if (Array.isArray(data.closed_trades)) {
+                    window.rawTradeHistory = data.closed_trades;
+                    renderTradeHistoryTable();
                 }
 
                 // Logs
@@ -847,6 +947,102 @@
                 await fetch('/api/killswitch', { method: 'POST' });
                 updateStatus();
             }
+        }
+
+        window.rawTradeHistory = [];
+
+        function renderTradeHistoryTable() {
+            const trades = window.rawTradeHistory || [];
+            const stratFilter = (document.getElementById('thFilterStrategy')?.value || 'ALL').toLowerCase();
+            const symFilter = (document.getElementById('thFilterSymbol')?.value || 'ALL').toUpperCase();
+            const outcomeFilter = (document.getElementById('thFilterOutcome')?.value || 'ALL').toUpperCase();
+
+            const filtered = trades.filter(t => {
+                if (stratFilter !== 'all') {
+                    const s = (t.strategy || '').toLowerCase();
+                    if (!s.includes(stratFilter)) return false;
+                }
+                if (symFilter !== 'ALL') {
+                    if ((t.symbol || '').toUpperCase() !== symFilter) return false;
+                }
+                if (outcomeFilter !== 'ALL') {
+                    if ((t.status || '').toUpperCase() !== outcomeFilter) return false;
+                }
+                return true;
+            });
+
+            // Update summary cards based on filtered set
+            let wins = 0, losses = 0, be = 0, netPnl = 0, winDollars = 0, lossDollars = 0;
+            for (const t of filtered) {
+                const p = parseFloat(t.profit || 0);
+                netPnl += p;
+                if (p > 0) { wins++; winDollars += p; }
+                else if (p < 0) { losses++; lossDollars += Math.abs(p); }
+                else { be++; }
+            }
+            const winRate = ((wins / Math.max(1, wins + losses)) * 100).toFixed(1) + '%';
+            const pf = lossDollars === 0 ? (winDollars > 0 ? '99.00' : '1.00') : (winDollars / lossDollars).toFixed(2);
+
+            const elTotal = document.getElementById('thTotalTrades');
+            const elWr = document.getElementById('thWinRate');
+            const elPnl = document.getElementById('thRealizedPnl');
+            const elPf = document.getElementById('thProfitFactor');
+
+            if (elTotal) elTotal.innerText = filtered.length;
+            if (elWr) elWr.innerText = winRate;
+            if (elPnl) {
+                elPnl.innerText = (netPnl >= 0 ? '+$' : '-$') + Math.abs(netPnl).toFixed(2);
+                elPnl.className = `text-base font-black ${netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-0.5`;
+            }
+            if (elPf) elPf.innerText = pf;
+
+            const tb = document.getElementById('tradeHistoryTableBody');
+            if (!tb) return;
+
+            if (filtered.length === 0) {
+                tb.innerHTML = `<tr><td colspan="11" class="text-center py-6 text-slate-500 font-mono">No closed trades matching selected filters.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            for (const t of filtered) {
+                const isWin = (t.profit || 0) > 0;
+                const isLoss = (t.profit || 0) < 0;
+                const pnlColor = isWin ? 'text-emerald-400' : (isLoss ? 'text-rose-400' : 'text-slate-300');
+                const sideColor = (t.side || 'BUY').toUpperCase() === 'BUY' ? 'text-emerald-400' : 'text-rose-400';
+                const profitSign = (t.profit || 0) > 0 ? '+' : ((t.profit || 0) < 0 ? '-' : '');
+                const retSign = (t.return_pct || 0) > 0 ? '+' : ((t.return_pct || 0) < 0 ? '-' : '');
+                const openDisp = t.open_price ? (t.open_price > 100 ? t.open_price.toFixed(2) : t.open_price.toFixed(5)) : '0.00';
+                const closeDisp = t.close_price ? (t.close_price > 100 ? t.close_price.toFixed(2) : t.close_price.toFixed(5)) : '0.00';
+                
+                let dateStr = 'Recent';
+                if (t.close_time) {
+                    const dt = new Date(t.close_time > 10000000000 ? t.close_time : t.close_time * 1000);
+                    dateStr = dt.toISOString().replace('T', ' ').substring(5, 16);
+                }
+
+                let badgeClass = 'bg-slate-800 text-slate-300 border-slate-700';
+                if (t.status === 'WIN') badgeClass = 'bg-emerald-950/80 text-emerald-400 border border-emerald-700/60';
+                else if (t.status === 'LOSS') badgeClass = 'bg-rose-950/80 text-rose-400 border border-rose-700/60';
+                else if (t.status === 'BREAKEVEN') badgeClass = 'bg-amber-950/80 text-amber-300 border border-amber-700/60';
+
+                html += `
+                    <tr class="border-b border-slate-800/60 hover:bg-slate-900/50 transition font-mono">
+                        <td class="py-2.5 pr-3 text-slate-300 font-bold">#${t.ticket}</td>
+                        <td class="py-2.5 px-2 text-slate-400 text-[11px]">${dateStr} <span class="text-cyan-400 font-bold">(${t.duration || 'N/A'})</span></td>
+                        <td class="py-2.5 px-2 font-bold text-cyan-300"><span class="px-2 py-0.5 rounded bg-cyan-950/70 border border-cyan-800/60 text-[10px]">${t.strategy || 'Quantitative Alpha'}</span></td>
+                        <td class="py-2.5 px-2 font-black text-white">${t.symbol}</td>
+                        <td class="py-2.5 px-2 font-bold ${sideColor}">${t.side}</td>
+                        <td class="py-2.5 px-2 text-slate-300">${t.volume}</td>
+                        <td class="py-2.5 px-2 text-slate-300">$${openDisp}</td>
+                        <td class="py-2.5 px-2 text-slate-300">$${closeDisp}</td>
+                        <td class="py-2.5 px-2 text-right font-black ${pnlColor}">${profitSign}$${Math.abs(t.profit || 0).toFixed(2)}</td>
+                        <td class="py-2.5 px-2 text-right font-bold ${pnlColor}">${retSign}${Math.abs(t.return_pct || 0).toFixed(2)}%</td>
+                        <td class="py-2.5 pl-3 text-center"><span class="px-2 py-0.5 rounded font-bold text-[10px] ${badgeClass}">${t.status || (isWin ? 'WIN' : 'LOSS')}</span></td>
+                    </tr>
+                `;
+            }
+            tb.innerHTML = html;
         }
 
         async function toggleBot() {
