@@ -890,6 +890,17 @@
                 document.getElementById('equityVal').innerText = `$${data.equity.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
                 document.getElementById('cashVal').innerText = `$${data.cash.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
                 
+                const eqSub = document.getElementById('equitySub');
+                if (eqSub) {
+                    const isLive = data.bridge && data.bridge.connected;
+                    const unpnl = data.unrealized_pnl || 0.0;
+                    eqSub.innerHTML = `
+                        <span class="inline-block w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'} mr-1"></span>
+                        <span class="${isLive ? 'text-emerald-300 font-bold' : 'text-slate-400'}">${isLive ? 'Live MT5' : 'Offline / Simulated'}</span>
+                        <span class="text-slate-500 ml-1.5">Unrealized: ${unpnl >= 0 ? '+' : ''}$${unpnl.toFixed(2)}</span>
+                    `;
+                }
+
                 const pnlEl = document.getElementById('dailyPnlVal');
                 pnlEl.innerText = `${data.daily_pnl >= 0 ? '+' : ''}$${data.daily_pnl.toFixed(2)}`;
                 pnlEl.className = `text-xl md:text-2xl font-black font-mono ${data.daily_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-1`;
@@ -907,12 +918,13 @@
                     document.getElementById('stratCountBadge').innerText = `${data.active_strategies_count} STRATEGIES ACTIVE`;
                 }
 
-                if (data.account) {
-                    const acc = data.account;
-                    const badge = document.getElementById('accountBadge');
-                    if (badge) {
-                        badge.innerText = `${acc.platform_name.toUpperCase()} ${acc.mode.toUpperCase()} ${acc.display_id}`;
-                    }
+                const acc = data.account || data.active_account;
+                const badge = document.getElementById('accountBadge');
+                if (badge && acc) {
+                    const pName = acc.platform_name || acc.platform || 'MT5';
+                    const mName = acc.mode || 'TESTNET';
+                    const dId = acc.display_id || acc.login || '';
+                    badge.innerText = `${pName.toUpperCase()} ${mName.toUpperCase()} ${dId}`;
                 }
 
                 // Sync lot size inputs from live server telemetry & active account settings
