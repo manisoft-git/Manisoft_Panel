@@ -31,6 +31,7 @@
 
         <div class="flex flex-wrap items-center gap-2 md:gap-3 text-xs font-mono">
             <span id="botStateBadge" class="px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">ACTIVE</span>
+            <span id="bridgeBadge" class="px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-500/40">MT5 BRIDGE: STANDBY</span>
             <span class="px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-700">MT5 DEMO #5058082931</span>
             <button onclick="toggleBot()" id="toggleBtn" class="px-3 py-1 rounded bg-amber-600/30 text-amber-300 border border-amber-500 hover:bg-amber-600/50 transition">PAUSE</button>
             <button onclick="triggerKillswitch()" class="px-3 py-1 rounded bg-rose-600 text-white font-bold hover:bg-rose-700 transition glow-red">KILLSWITCH</button>
@@ -246,6 +247,18 @@
                 } else {
                     cbEl.innerText = "ARMED";
                     cbEl.className = "text-xl md:text-2xl font-black font-mono text-emerald-400 mt-1";
+                }
+
+                // MT5 Cloud-to-Terminal Bridge state
+                const bBadge = document.getElementById('bridgeBadge');
+                if (bBadge && data.bridge) {
+                    if (data.bridge.connected) {
+                        bBadge.innerText = 'MT5 BRIDGE: ONLINE (VPS)';
+                        bBadge.className = 'px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 glow-green';
+                    } else {
+                        bBadge.innerText = 'MT5 BRIDGE: STANDBY';
+                        bBadge.className = 'px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-500/40';
+                    }
                 }
 
                 // Market watch

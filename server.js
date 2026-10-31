@@ -71,10 +71,14 @@ function saveGoogleAuthConfig(cfg) {
 let stcBotActive = true;
 let stcDemoEquity = 100000.0;
 let stcOpenPositions = [];
+let pendingBridgeOrders = [];
+let lastBridgeSync = 0;
+let mt5AccountInfo = { account: 5058082931, broker: 'MetaQuotes-Demo', balance: 100000.0, margin_free: 100000.0 };
 let stcAuditLogs = [
   '[' + new Date().toISOString().substring(11, 19) + '] Manisoft_STC_Bot Cloud Core online (24/7 Render)',
   '[' + new Date().toISOString().substring(11, 19) + '] Attached to MT5 Demo #5058082931 on MetaQuotes-Demo',
-  '[' + new Date().toISOString().substring(11, 19) + '] Real-time multi-timeframe streaming active (EURUSD & GBPUSD)'
+  '[' + new Date().toISOString().substring(11, 19) + '] Real-time multi-timeframe streaming active (EURUSD & GBPUSD)',
+  '[' + new Date().toISOString().substring(11, 19) + '] MT5 Cloud-to-Terminal Execution Bridge online & listening'
 ];
 
 function addStcLog(msg) {
@@ -1537,7 +1541,7 @@ const server = http.createServer(async (req, res) => {
   // ALL PROTECTED /api/* AND /tunnel/* ROUTES REQUIRE LEVEL 1 OPERATOR CLEARANCE
   // (public exceptions: /api/models — non-sensitive model list)
   // ----------------------------------------------------------------------------
-  if ((pathname.startsWith('/api/') || pathname.startsWith('/tunnel/')) && pathname !== '/api/models' && pathname !== '/api/status' && !pathname.startsWith('/api/candles') && pathname !== '/api/toggle' && pathname !== '/api/killswitch' && pathname !== '/api/order') {
+  if ((pathname.startsWith('/api/') || pathname.startsWith('/tunnel/')) && pathname !== '/api/models' && pathname !== '/api/status' && !pathname.startsWith('/api/candles') && pathname !== '/api/toggle' && pathname !== '/api/killswitch' && pathname !== '/api/order' && !pathname.startsWith('/api/bridge')) {
     const authHeader = req.headers['authorization'] || req.headers['x-manisoft-token'] || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const hasValidSession = isValidSession(token) || isZeroTrustBypass;
@@ -1567,6 +1571,13 @@ const server = http.createServer(async (req, res) => {
         reason: 'All systems nominal',
         cap_usd: 500.0
       },
+      bridge: {
+        connected: (Date.now() - lastBridgeSync < 20000),
+        last_sync: lastBridgeSync,
+        account: mt5AccountInfo.account,
+        broker: mt5AccountInfo.broker,
+        pending_orders: pendingBridgeOrders.length
+      },
       open_positions: stcOpenPositions,
       market: {
         'EURUSD': { price: 1.1146, spread_pct: 0.001 },
@@ -1574,6 +1585,54 @@ const server = http.createServer(async (req, res) => {
       },
       logs: stcAuditLogs
     });
+  }
+
+  // REST API: MT5 Cloud-to-Terminal Execution Bridge
+  if (pathname === '/api/bridge/pending' && req.method === 'GET') {
+    return sendJSON(res, {
+      status: 'OK',
+      timestamp: Date.now(),
+      orders: pendingBridgeOrders
+    });
+  }
+
+  if (pathname === '/api/bridge/sync' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        lastBridgeSync = Date.now();
+        if (data.balance != null) stcDemoEquity = parseFloat(data.equity || data.balance);
+        if (data.account) mt5AccountInfo.account = data.account;
+        if (data.broker) mt5AccountInfo.broker = data.broker;
+        if (Array.isArray(data.positions)) stcOpenPositions = data.positions;
+        return sendJSON(res, { status: 'SYNCED', received_positions: (data.positions || []).length });
+      } catch (e) {
+        return sendJSON(res, { status: 'ERROR', error: e.message }, 400);
+      }
+    });
+    return;
+  }
+
+  if (pathname === '/api/bridge/filled' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        pendingBridgeOrders = pendingBridgeOrders.filter(o => o.id !== data.order_id);
+        if (data.ticket && data.ticket > 0) {
+          addStcLog(`⚡ [MT5 CONFIRMED] Ticket #${data.ticket} | Status: ${data.status} @ ${data.fill_price}`);
+        } else {
+          addStcLog(`⚠️ [MT5 NOTICE] Order ${data.order_id}: ${data.status}`);
+        }
+        return sendJSON(res, { status: 'ACKNOWLEDGED', order_id: data.order_id });
+      } catch (e) {
+        return sendJSON(res, { status: 'ERROR', error: e.message }, 400);
+      }
+    });
+    return;
   }
 
   const candleMatch = pathname.match(/^\/api\/candles\/([a-zA-Z0-9_-]+)/);
@@ -1595,6 +1654,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/killswitch' && req.method === 'POST') {
     stcBotActive = false;
     stcOpenPositions = [];
+    pendingBridgeOrders = [{ id: 'KILL-' + Date.now(), action: 'KILLSWITCH' }];
     addStcLog('🛑 EMERGENCY KILLSWITCH ACTIVATED FROM MISSION CONTROL!');
     return sendJSON(res, { status: 'SUCCESS', message: 'All orders flushed, positions liquidated, bot paused.' });
   }
@@ -1608,31 +1668,29 @@ const server = http.createServer(async (req, res) => {
         const sym = (data.symbol || 'EURUSD').toUpperCase();
         const side = (data.side || 'BUY').toUpperCase();
         const lots = parseFloat(data.lots || 0.01);
-        const ticket = Math.floor(59000000000 + Math.random() * 900000000);
+        const orderId = 'ORD-' + Date.now();
         const estPrice = sym === 'EURUSD' ? 1.1146 : 1.3331;
         const sl = side === 'BUY' ? estPrice - 0.0020 : estPrice + 0.0020;
         const tp = side === 'BUY' ? estPrice + 0.0040 : estPrice - 0.0040;
         
-        stcOpenPositions.push({
+        // Queue order for 24/7 MT5 Bridge execution
+        pendingBridgeOrders.push({
+          id: orderId,
+          action: side,
           symbol: sym,
-          side: side,
-          quantity: lots,
-          entry_price: estPrice,
-          current_price: estPrice,
-          stop_loss: sl,
-          take_profit: tp,
-          unrealized_pnl: 0.0,
-          open_time: new Date().toISOString().substring(11, 19)
+          volume: lots,
+          sl: sl,
+          tp: tp
         });
-        
-        addStcLog('⚡ [MT5 DEMO FILLED] ' + side + ' ' + lots + ' lots ' + sym + ' @ ' + estPrice.toFixed(5) + ' (Ticket #' + ticket + ')');
+
+        addStcLog('⚡ [ORDER DISPATCHED] ' + side + ' ' + lots + ' lots ' + sym + ' queued for MT5 execution (ID #' + orderId + ')');
         sendJSON(res, {
-          status: 'FILLED',
-          order_id: ticket.toString(),
+          status: 'QUEUED',
+          order_id: orderId,
           symbol: sym,
           side: side,
-          fill_price: estPrice,
-          quantity: lots
+          target_price: estPrice,
+          volume: lots
         });
       } catch (e) {
         sendJSON(res, { status: 'FAILED', reason: e.message }, 400);
