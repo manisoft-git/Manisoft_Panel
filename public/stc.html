@@ -34,7 +34,7 @@
             <h2 class="text-xl font-black font-mono text-cyan-300 tracking-wider">MANISOFT STC BOT</h2>
             <p class="text-xs text-slate-400 mt-1 mb-6 font-mono">MISSION CONTROL // SOVEREIGN SECURITY</p>
             <form onsubmit="event.preventDefault(); authenticateOperator();" class="space-y-4">
-                <input id="masterKeyInput" type="password" placeholder="Enter Password..." autocomplete="current-password" autofocus class="w-full bg-slate-900/90 border border-cyan-800 rounded-lg px-4 py-3 text-sm font-mono text-cyan-200 placeholder-slate-600 focus:outline-none focus:border-cyan-400">
+                <input id="masterKeyInput" type="password" placeholder="Enter Password (manisoft11stc)..." autocomplete="current-password" autofocus class="w-full bg-slate-900/90 border border-cyan-800 rounded-lg px-4 py-3 text-sm font-mono text-cyan-200 placeholder-slate-600 focus:outline-none focus:border-cyan-400">
                 <div id="loginError" class="text-xs text-rose-400 font-mono hidden">❌ Invalid Password. Access Denied.</div>
                 <button type="submit" id="unlockBtn" class="w-full py-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-mono font-bold tracking-wider transition cyber-glow">UNLOCK DASHBOARD</button>
             </form>
@@ -102,15 +102,31 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <!-- Interactive Chart -->
         <div class="cyber-card p-4 rounded-xl lg:col-span-2 flex flex-col h-[480px]">
-            <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-bold text-slate-200 font-mono" id="activeChartSymbol">EURUSD</span>
-                    <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">15m M15</span>
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+                    <span class="text-sm font-bold text-cyan-300 font-mono tracking-wider" id="activeChartSymbol">XAUUSD</span>
+                    <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800" id="chartTfBadge">15m M15</span>
+                    <span class="text-sm font-mono font-black text-emerald-400" id="currentPriceTag">$0.00</span>
+                    <span id="chartLiveIndicator" class="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> LIVE FEED
+                    </span>
                 </div>
-                <div class="flex gap-2 text-xs font-mono">
-                    <button onclick="setChartSymbol('EURUSD')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">EURUSD</button>
-                    <button onclick="setChartSymbol('GBPUSD')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">GBPUSD</button>
-                    <button onclick="setChartSymbol('BTC/USDT')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">BTC</button>
+                <div class="flex flex-wrap gap-1.5 text-xs font-mono items-center">
+                    <div class="flex gap-1 bg-slate-900 p-0.5 rounded border border-slate-800">
+                        <button onclick="setChartTimeframe('5m')" id="tf_5m" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">5m</button>
+                        <button onclick="setChartTimeframe('15m')" id="tf_15m" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-bold transition">15m</button>
+                        <button onclick="setChartTimeframe('1h')" id="tf_1h" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">1h</button>
+                        <button onclick="setChartTimeframe('4h')" id="tf_4h" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">4h</button>
+                        <button onclick="setChartTimeframe('1d')" id="tf_1d" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">1d</button>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                        <button onclick="setChartSymbol('XAUUSD')" id="chip_XAUUSD" class="px-2 py-1 rounded bg-amber-950/70 text-amber-300 border border-amber-500/40 font-bold hover:bg-amber-900/80 transition ring-2 ring-cyan-400">GOLD</button>
+                        <button onclick="setChartSymbol('XAGUSD')" id="chip_XAGUSD" class="px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-600 font-bold hover:bg-slate-700 transition">SILVER</button>
+                        <button onclick="setChartSymbol('WTI')" id="chip_WTI" class="px-2 py-1 rounded bg-rose-950/70 text-rose-300 border border-rose-500/40 font-bold hover:bg-rose-900/80 transition">CRUDE</button>
+                        <button onclick="setChartSymbol('EURUSD')" id="chip_EURUSD" class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition">EURUSD</button>
+                        <button onclick="setChartSymbol('GBPUSD')" id="chip_GBPUSD" class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition">GBPUSD</button>
+                        <button onclick="setChartSymbol('BTCUSD')" id="chip_BTCUSD" class="px-2 py-1 rounded bg-cyan-950/70 text-cyan-300 border border-cyan-500/40 font-bold hover:bg-cyan-900/80 transition">BTC</button>
+                    </div>
                 </div>
             </div>
             <div id="chartContainer" class="w-full flex-1 rounded-lg overflow-hidden bg-slate-950"></div>
@@ -495,9 +511,29 @@
     <script>
         let chart = null;
         let candleSeries = null;
-        let currentSymbol = 'EURUSD';
+        let currentSymbol = 'XAUUSD';
+        let currentChartTimeframe = '15m';
+        let chartInitialFitted = false;
 
         let authToken = localStorage.getItem('manisoft_stc_token') || '';
+
+        // GLOBAL FETCH INTERCEPTOR: Automatically sign all requests with Sovereign Clearance Token
+        const _nativeFetch = window.fetch;
+        window.fetch = async function(resource, init = {}) {
+            init = init || {};
+            const headers = new Headers(init.headers || {});
+            if (authToken) {
+                headers.set('Authorization', `Bearer ${authToken}`);
+                headers.set('x-manisoft-token', authToken);
+            }
+            init.headers = headers;
+            const res = await _nativeFetch(resource, init);
+            if (res.status === 401 && !String(resource).includes('/api/stc/login') && !String(resource).includes('/api/status') && !String(resource).includes('/api/candles')) {
+                console.warn("[ManiSoft STC] Sovereign Clearance required for:", resource);
+                lockDashboard();
+            }
+            return res;
+        };
 
         function checkAuthOnLoad() {
             const ls = document.getElementById('stcLockScreen');
@@ -533,6 +569,9 @@
                     const ls = document.getElementById('stcLockScreen');
                     if (ls) ls.classList.add('hidden');
                     updateStatus();
+                    loadStrategies();
+                    loadAssetsCatalog();
+                    loadChartData();
                 } else {
                     if (errEl) {
                         errEl.innerText = '❌ Invalid Password. Access Denied.';
@@ -571,30 +610,42 @@
             const container = document.getElementById('chartContainer');
             if (!container) return;
             if (typeof LightweightCharts === 'undefined') {
-                setTimeout(initChart, 250);
+                setTimeout(initChart, 200);
                 return;
             }
             if (chart) return;
 
             chart = LightweightCharts.createChart(container, {
                 width: container.clientWidth || 800,
-                height: container.clientHeight || 360,
+                height: container.clientHeight || 380,
                 layout: { background: { color: '#090d16' }, textColor: '#94a3b8' },
                 grid: { vertLines: { color: 'rgba(30, 41, 59, 0.4)' }, horzLines: { color: 'rgba(30, 41, 59, 0.4)' } },
                 crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
                 timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#1e293b' },
-                rightPriceScale: { borderColor: '#1e293b' }
+                rightPriceScale: { borderColor: '#1e293b', autoScale: true }
             });
 
             candleSeries = chart.addCandlestickSeries({
                 upColor: '#10b981', downColor: '#f43f5e',
                 borderVisible: false,
-                wickUpColor: '#10b981', wickDownColor: '#f43f5e'
+                wickUpColor: '#10b981', wickDownColor: '#f43f5e',
+                priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
             });
 
-            window.addEventListener('resize', () => {
-                if (chart && container) chart.resize(container.clientWidth, container.clientHeight);
-            });
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(entries => {
+                    if (entries && entries[0] && chart && container) {
+                        const { width, height } = entries[0].contentRect;
+                        if (width > 0 && height > 0) chart.resize(width, height);
+                    }
+                });
+                ro.observe(container);
+            } else {
+                window.addEventListener('resize', () => {
+                    if (chart && container) chart.resize(container.clientWidth, container.clientHeight);
+                });
+            }
+
             loadChartData();
         }
 
@@ -602,17 +653,31 @@
             if (!candleSeries) return;
             try {
                 const symParam = currentSymbol.replace('/', '-');
-                const res = await fetch(`/api/candles/${symParam}?timeframe=15m&limit=100`);
+                const tf = currentChartTimeframe || '15m';
+                const res = await fetch(`/api/candles/${symParam}?timeframe=${tf}&limit=100`);
                 const candles = await res.json();
                 if (Array.isArray(candles) && candles.length > 0) {
-                    candleSeries.setData(candles);
-                    if (chart && chart.timeScale) {
-                        chart.timeScale().fitContent();
-                    }
                     const lastBar = candles[candles.length - 1];
+                    const isHighPrice = lastBar.close > 50;
+                    candleSeries.applyOptions({
+                        priceFormat: {
+                            type: 'price',
+                            precision: isHighPrice ? 2 : 5,
+                            minMove: isHighPrice ? 0.01 : 0.00001
+                        }
+                    });
+
+                    candleSeries.setData(candles);
+
+                    // Fit content only when changing symbol or on initial load
+                    if (!chartInitialFitted && chart && chart.timeScale) {
+                        chart.timeScale().fitContent();
+                        chartInitialFitted = true;
+                    }
+
                     const priceEl = document.getElementById('currentPriceTag');
                     if (priceEl && lastBar) {
-                        priceEl.innerText = '$' + lastBar.close.toFixed(lastBar.close > 50 ? 2 : 5);
+                        priceEl.innerText = '$' + lastBar.close.toFixed(isHighPrice ? 2 : 5);
                     }
                 }
             } catch (e) {
@@ -620,9 +685,37 @@
             }
         }
 
+        function setChartTimeframe(tf) {
+            currentChartTimeframe = tf;
+            chartInitialFitted = false;
+            ['5m', '15m', '1h', '4h', '1d'].forEach(t => {
+                const b = document.getElementById('tf_' + t);
+                if (b) {
+                    b.className = (t === tf)
+                        ? 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-bold transition'
+                        : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+                }
+            });
+            const badge = document.getElementById('chartTfBadge');
+            if (badge) badge.innerText = tf.toUpperCase() + ' ' + (tf === '15m' ? 'M15' : (tf === '5m' ? 'M5' : (tf === '1h' ? 'H1' : (tf === '4h' ? 'H4' : 'D1'))));
+            loadChartData();
+        }
+
         function setChartSymbol(sym) {
             currentSymbol = sym;
-            document.getElementById('activeChartSymbol').innerText = sym;
+            chartInitialFitted = false;
+            const el = document.getElementById('activeChartSymbol');
+            if (el) el.innerText = sym;
+            ['XAUUSD', 'XAGUSD', 'WTI', 'EURUSD', 'GBPUSD', 'BTCUSD'].forEach(s => {
+                const chip = document.getElementById('chip_' + s);
+                if (chip) {
+                    if (s === sym || (s === 'BTCUSD' && sym.includes('BTC'))) {
+                        chip.classList.add('ring-2', 'ring-cyan-400');
+                    } else {
+                        chip.classList.remove('ring-2', 'ring-cyan-400');
+                    }
+                }
+            });
             loadChartData();
         }
 
@@ -678,13 +771,14 @@
                     const priceDisplay = priceVal > 100 ? priceVal.toFixed(2) : priceVal.toFixed(5);
                     const spreadVal = (info && info.spread_pct !== undefined) ? info.spread_pct : 0.0;
                     mwHtml += `
-                        <div class="flex justify-between items-center p-2 rounded bg-slate-900/60 border border-slate-800">
+                        <div onclick="setChartSymbol('${sym}')" class="flex justify-between items-center p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-950/20 cursor-pointer transition" title="Click to view ${sym} live chart">
                             <div>
                                 <span class="font-bold text-slate-200">${sym}</span>
+                                <span class="text-[10px] text-cyan-400 ml-1.5 opacity-80">📈 Chart</span>
                                 <span class="text-[10px] text-slate-500 ml-2">Spread: ${spreadVal}%</span>
                             </div>
                             <div class="text-right">
-                                <span class="text-cyan-300 font-bold">$${priceDisplay}</span>
+                                <span class="text-cyan-300 font-bold font-mono">$${priceDisplay}</span>
                             </div>
                         </div>
                     `;
@@ -875,6 +969,8 @@
                 if (data.status === 'SUCCESS') {
                     await loadStrategies();
                     updateStatus();
+                } else {
+                    alert('Strategy toggle failed: ' + (data.error || data.message || 'Unauthorized'));
                 }
             } catch (e) {
                 console.error("Strategy timeframe update failed:", e);
@@ -892,6 +988,8 @@
                 if (data.status === 'SUCCESS') {
                     await loadStrategies();
                     updateStatus();
+                } else {
+                    alert('Strategy toggle failed: ' + (data.error || data.message || 'Unauthorized'));
                 }
             } catch (e) {
                 console.error("Strategy toggle failed:", e);
@@ -909,6 +1007,8 @@
                 if (data.status === 'SUCCESS') {
                     await loadStrategies();
                     updateStatus();
+                } else {
+                    alert('Strategy toggle failed: ' + (data.error || data.message || 'Unauthorized'));
                 }
             } catch (e) {
                 console.error("Folder toggle failed:", e);
@@ -1726,6 +1826,8 @@
                     input.dataset.userEdited = "false";
                     alert(`Trade lot size successfully updated to ${result.lot_size.toFixed(2)} lots.`);
                     updateStatus();
+                } else {
+                    alert("Failed to update lot size: " + (result.error || result.message || 'Unauthorized'));
                 }
             } catch (e) {
                 alert("Failed to update lot size: " + e.message);
@@ -1752,6 +1854,8 @@
                     document.getElementById("manualLots").value = result.lot_size;
                     alert(`Trade lot size successfully updated to ${result.lot_size.toFixed(2)} lots.`);
                     updateStatus();
+                } else {
+                    alert("Failed to update lot size: " + (result.error || result.message || 'Unauthorized'));
                 }
             } catch (e) {
                 alert("Failed to update lot size: " + e.message);

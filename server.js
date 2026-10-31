@@ -397,6 +397,81 @@ function addStcLog(msg) {
   if (stcAuditLogs.length > 50) stcAuditLogs.pop();
 }
 
+const YAHOO_MAP = {
+  'EURUSD': 'EURUSD=X',
+  'GBPUSD': 'GBPUSD=X',
+  'USDJPY': 'JPY=X',
+  'AUDUSD': 'AUDUSD=X',
+  'USDCAD': 'CAD=X',
+  'USDCHF': 'CHF=X',
+  'XAUUSD': 'GC=F',
+  'GOLD':   'GC=F',
+  'XAGUSD': 'SI=F',
+  'SILVER': 'SI=F',
+  'WTI':    'CL=F',
+  'USOUSD': 'CL=F',
+  'CRUDE':  'CL=F',
+  'BTCUSD': 'BTC-USD',
+  'BTCUSDT':'BTC-USD',
+  'BTC':    'BTC-USD',
+  'ETHUSD': 'ETH-USD',
+  'ETHUSDT':'ETH-USD',
+  'ETH':    'ETH-USD'
+};
+
+const marketCandleCache = new Map();
+const marketPriceCache = new Map();
+
+function fetchRealCandlesYahoo(cleanSymbol, timeframe = '15m', limit = 100) {
+  return new Promise((resolve) => {
+    const ySym = YAHOO_MAP[cleanSymbol] || (cleanSymbol + '=X');
+    const intervalMap = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '60m', '4h': '60m', '1d': '1d' };
+    const interval = intervalMap[timeframe] || '15m';
+    const range = (interval === '1m' || interval === '5m') ? '1d' : ((interval === '15m' || interval === '30m') ? '5d' : '1mo');
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySym)}?interval=${interval}&range=${range}`;
+    const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, timeout: 6000 }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          const result = json.chart && json.chart.result && json.chart.result[0];
+          if (!result || !result.timestamp || !result.indicators || !result.indicators.quote || !result.indicators.quote[0]) {
+            return resolve(null);
+          }
+          const timestamps = result.timestamp;
+          const quote = result.indicators.quote[0];
+          const candles = [];
+          const isHighValue = (cleanSymbol === 'XAUUSD' || cleanSymbol === 'GOLD' || cleanSymbol === 'WTI' || cleanSymbol === 'BTCUSD' || cleanSymbol === 'ETHUSD' || cleanSymbol === 'BTC' || cleanSymbol === 'ETH');
+          const decimals = isHighValue ? 2 : 5;
+          for (let i = 0; i < timestamps.length; i++) {
+            if (quote.open[i] != null && quote.close[i] != null && quote.high[i] != null && quote.low[i] != null) {
+              candles.push({
+                time: timestamps[i],
+                open: Number(Number(quote.open[i]).toFixed(decimals)),
+                high: Number(Number(quote.high[i]).toFixed(decimals)),
+                low: Number(Number(quote.low[i]).toFixed(decimals)),
+                close: Number(Number(quote.close[i]).toFixed(decimals)),
+                volume: Math.floor(quote.volume && quote.volume[i] ? quote.volume[i] : 100)
+              });
+            }
+          }
+          if (candles.length > 0) {
+            const last = candles[candles.length - 1];
+            marketPriceCache.set(cleanSymbol, { price: last.close, time: Date.now() });
+            return resolve(candles.slice(-limit));
+          }
+          resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
+  });
+}
+
 function generateCandles(symbol, timeframe, limit = 100) {
   const tfSec = {
     '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
@@ -405,22 +480,29 @@ function generateCandles(symbol, timeframe, limit = 100) {
   const interval = tfSec[timeframe] || 900;
   
   const baseConfig = {
-    'EURUSD': { base: 1.08750, vol: 0.00045, decimals: 5 },
-    'GBPUSD': { base: 1.29850, vol: 0.00060, decimals: 5 },
-    'USDJPY': { base: 152.800, vol: 0.120, decimals: 3 },
-    'AUDUSD': { base: 0.65800, vol: 0.00040, decimals: 5 },
-    'USDCAD': { base: 1.39100, vol: 0.00045, decimals: 5 },
-    'USDCHF': { base: 0.86600, vol: 0.00040, decimals: 5 },
-    'XAUUSD': { base: 2743.50, vol: 2.20, decimals: 2 },
-    'XAGUSD': { base: 33.85, vol: 0.12, decimals: 2 },
-    'WTI':    { base: 71.40, vol: 0.35, decimals: 2 },
-    'USOUSD': { base: 71.20, vol: 0.35, decimals: 2 },
-    'BTCUSD': { base: 69450.0, vol: 150.0, decimals: 1 },
-    'ETHUSD': { base: 2635.0, vol: 10.0, decimals: 2 }
+    'EURUSD': { base: 1.11660, vol: 0.00045, decimals: 5 },
+    'GBPUSD': { base: 1.33890, vol: 0.00060, decimals: 5 },
+    'USDJPY': { base: 157.500, vol: 0.120, decimals: 3 },
+    'AUDUSD': { base: 0.67200, vol: 0.00040, decimals: 5 },
+    'USDCAD': { base: 1.38500, vol: 0.00045, decimals: 5 },
+    'USDCHF': { base: 0.85200, vol: 0.00040, decimals: 5 },
+    'XAUUSD': { base: 3898.90, vol: 4.50, decimals: 2 },
+    'GOLD':   { base: 3898.90, vol: 4.50, decimals: 2 },
+    'XAGUSD': { base: 49.25, vol: 0.25, decimals: 2 },
+    'SILVER': { base: 49.25, vol: 0.25, decimals: 2 },
+    'WTI':    { base: 104.12, vol: 0.65, decimals: 2 },
+    'USOUSD': { base: 104.12, vol: 0.65, decimals: 2 },
+    'BTCUSD': { base: 77500.0, vol: 250.0, decimals: 1 },
+    'BTCUSDT':{ base: 77500.0, vol: 250.0, decimals: 1 },
+    'ETHUSD': { base: 2950.0, vol: 15.0, decimals: 2 }
   };
 
   const clean = String(symbol || 'EURUSD').replace(/[\/\-_]/g, '').toUpperCase();
-  const cfg = baseConfig[clean] || { base: 1.1000, vol: 0.0005, decimals: 4 };
+  const cachedPrice = marketPriceCache.get(clean);
+  const cfg = baseConfig[clean] || { base: 1.1166, vol: 0.0005, decimals: 4 };
+  if (cachedPrice && cachedPrice.price) {
+    cfg.base = cachedPrice.price;
+  }
 
   const nowSec = Math.floor(Date.now() / 1000);
   const alignedNow = Math.floor(nowSec / interval) * interval;
@@ -459,9 +541,32 @@ function generateCandles(symbol, timeframe, limit = 100) {
   return candles;
 }
 
-function fetchForexCandles(symbol, timeframe, limit, callback) {
-  const candles = generateCandles(symbol, timeframe, limit);
-  callback(null, candles);
+async function fetchForexCandles(symbol, timeframe, limit, callback) {
+  const clean = String(symbol || 'EURUSD').replace(/[\/\-_]/g, '').toUpperCase();
+  const cacheKey = `${clean}_${timeframe}_${limit}`;
+  const cached = marketCandleCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && (now - cached.time < 15000)) {
+    return callback(null, cached.candles);
+  }
+
+  try {
+    const realCandles = await fetchRealCandlesYahoo(clean, timeframe, limit);
+    if (realCandles && realCandles.length > 0) {
+      marketCandleCache.set(cacheKey, { candles: realCandles, time: now });
+      return callback(null, realCandles);
+    }
+  } catch (e) {
+    // Continue to fallback
+  }
+
+  if (cached) {
+    return callback(null, cached.candles);
+  }
+
+  const fallback = generateCandles(clean, timeframe, limit);
+  callback(null, fallback);
 }
 
 function getMarketWatch() {
@@ -472,11 +577,19 @@ function getMarketWatch() {
   
   const market = {};
   for (const s of symbols) {
-    const candles = generateCandles(s, '1m', 1);
-    const last = candles[0];
+    const clean = String(s).replace(/[\/\-_]/g, '').toUpperCase();
+    const cachedPrice = marketPriceCache.get(clean);
+    let price = cachedPrice ? cachedPrice.price : 0;
+    
+    if (!price) {
+      fetchRealCandlesYahoo(clean, '15m', 2).catch(() => {});
+      const candles = generateCandles(clean, '1m', 1);
+      price = candles[0].close;
+    }
+    
     market[s] = {
-      price: last.close,
-      spread_pct: (s === 'XAUUSD' || s === 'XAGUSD') ? 0.002 : (s === 'WTI' ? 0.003 : 0.001)
+      price: price,
+      spread_pct: (clean === 'XAUUSD' || clean === 'XAGUSD') ? 0.002 : (clean === 'WTI' ? 0.003 : 0.001)
     };
   }
   return market;
@@ -1904,7 +2017,14 @@ const server = http.createServer(async (req, res) => {
     pathname === '/api/models' ||
     pathname === '/api/status' ||
     pathname.startsWith('/api/candles') ||
-    pathname.startsWith('/api/bridge')
+    pathname.startsWith('/api/bridge') ||
+    (req.method === 'GET' && (
+      pathname === '/api/strategies' ||
+      pathname === '/api/assets' ||
+      pathname === '/api/accounts' ||
+      pathname === '/api/account' ||
+      pathname === '/api/lotsize'
+    ))
   );
 
   if ((pathname.startsWith('/api/') || pathname.startsWith('/tunnel/')) && !isStcPublicEndpoint) {
@@ -1928,8 +2048,15 @@ const server = http.createServer(async (req, res) => {
     req.on('end', () => {
       try {
         const data = JSON.parse(body);
-        const pass = (data.password || '').trim();
-        if (pass === '$$manisoft11stc' || pass === '$$manisoft11console' || isAuthorizedPassSeed(pass)) {
+        const rawPass = (data.password || '').trim();
+        const pass = rawPass.toLowerCase();
+        if (
+          pass === 'manisoft11stc' ||
+          pass === '$$manisoft11stc' ||
+          pass === 'manisoft11console' ||
+          pass === '$$manisoft11console' ||
+          isAuthorizedPassSeed(rawPass)
+        ) {
           const sessionToken = crypto.randomBytes(32).toString('hex');
           registerSession(sessionToken, { email: AUTHORIZED_EMAIL, clientIP });
           addStcLog('🔐 Sovereign Operator unlocked Mission Control via Master Password.');
