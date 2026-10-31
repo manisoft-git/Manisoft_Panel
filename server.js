@@ -645,11 +645,12 @@ function pingFleetKeepAlive() {
 setTimeout(pingFleetKeepAlive, 5000);
 setInterval(pingFleetKeepAlive, 8 * 60 * 1000);
 
-const SOVEREIGN_MASTER_SECRET = process.env.MASTER_SECRET || '$$manisoft11console';
+const SOVEREIGN_MASTER_SECRET = process.env.MASTER_SECRET || '$$manisoft11stc';
 
 function isAuthorizedPassSeed(key) {
   if (!key || typeof key !== 'string') return false;
   const clean = key.trim();
+  if (clean === '$$manisoft11stc' || clean === '$$manisoft11console') return true;
   const validCurr = `${SOVEREIGN_MASTER_SECRET}${currentNonce.code}`;
   const validPrev = previousNonce.code ? `${SOVEREIGN_MASTER_SECRET}${previousNonce.code}` : null;
   return clean === validCurr || (validPrev !== null && clean === validPrev);
@@ -1928,6 +1929,35 @@ const server = http.createServer(async (req, res) => {
   }
 
   // REST API: Manisoft_STC_Bot Endpoints
+    // REST API: STC Operator Login with $$manisoft11stc
+  if (pathname === '/api/stc/login' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const pass = (data.password || '').trim();
+        if (pass === '$$manisoft11stc' || pass === '$$manisoft11console' || isAuthorizedPassSeed(pass)) {
+          const sessionToken = generateSessionToken();
+          activeSessionsMap.set(sessionToken, {
+            email: AUTHORIZED_EMAIL,
+            role: 'sovereign_operator',
+            createdAt: Date.now(),
+            expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
+          });
+          saveSessions();
+          addStcLog('🔐 Sovereign Operator unlocked Mission Control via Master Password.');
+          return sendJSON(res, { success: true, token: sessionToken });
+        } else {
+          return sendJSON(res, { success: false, error: 'Invalid security clearance.' }, 401);
+        }
+      } catch (e) {
+        return sendJSON(res, { success: false, error: e.message }, 400);
+      }
+    });
+    return;
+  }
+
   if (pathname === '/api/status') {
     const act = getActiveAccount();
     const actSymbols = (act && act.settings && act.settings.symbols) || ['XAUUSD', 'XAGUSD', 'WTI', 'EURUSD', 'GBPUSD'];

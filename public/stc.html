@@ -25,6 +25,23 @@
     </style>
 </head>
 <body class="min-h-screen p-3 md:p-6 pb-20">
+    <!-- Master Password Lock Screen -->
+    <div id="stcLockScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-[#06090e] p-4 transition-opacity duration-300">
+        <div class="cyber-card p-6 md:p-8 rounded-2xl max-w-sm w-full border border-cyan-500/40 text-center shadow-2xl">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-cyan-950/70 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <h2 class="text-xl font-black font-mono text-cyan-300 tracking-wider">MANISOFT STC BOT</h2>
+            <p class="text-xs text-slate-400 mt-1 mb-6 font-mono">MISSION CONTROL // SOVEREIGN SECURITY</p>
+            <form onsubmit="event.preventDefault(); authenticateOperator();" class="space-y-4">
+                <input id="masterKeyInput" type="password" placeholder="Enter Password..." autocomplete="current-password" autofocus class="w-full bg-slate-900/90 border border-cyan-800 rounded-lg px-4 py-3 text-sm font-mono text-cyan-200 placeholder-slate-600 focus:outline-none focus:border-cyan-400">
+                <div id="loginError" class="text-xs text-rose-400 font-mono hidden">❌ Invalid Password. Access Denied.</div>
+                <button type="submit" id="unlockBtn" class="w-full py-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-mono font-bold tracking-wider transition cyber-glow">UNLOCK DASHBOARD</button>
+            </form>
+            <div class="text-[10px] text-slate-600 mt-6 font-mono">ENCRYPTED SOVEREIGN LINK</div>
+        </div>
+    </div>
+
 
     <!-- Top Navigation -->
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-cyan-900/40">
@@ -479,6 +496,76 @@
         let chart = null;
         let candleSeries = null;
         let currentSymbol = 'EURUSD';
+
+        let authToken = localStorage.getItem('manisoft_stc_token') || '';
+
+        function checkAuthOnLoad() {
+            const ls = document.getElementById('stcLockScreen');
+            if (authToken) {
+                if (ls) ls.classList.add('hidden');
+            } else {
+                if (ls) ls.classList.remove('hidden');
+                const input = document.getElementById('masterKeyInput');
+                if (input) setTimeout(() => input.focus(), 200);
+            }
+        }
+
+        async function authenticateOperator() {
+            const input = document.getElementById('masterKeyInput');
+            const errEl = document.getElementById('loginError');
+            const btn = document.getElementById('unlockBtn');
+            const pass = (input ? input.value : '').trim();
+            if (!pass) return;
+
+            if (btn) btn.innerText = 'AUTHENTICATING...';
+
+            try {
+                const res = await fetch('/api/stc/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pass })
+                });
+                const data = await res.json();
+                if (data.success && data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('manisoft_stc_token', authToken);
+                    if (errEl) errEl.classList.add('hidden');
+                    const ls = document.getElementById('stcLockScreen');
+                    if (ls) ls.classList.add('hidden');
+                    updateStatus();
+                } else {
+                    if (errEl) {
+                        errEl.innerText = '❌ Invalid Password. Access Denied.';
+                        errEl.classList.remove('hidden');
+                    }
+                    if (input) {
+                        input.value = '';
+                        input.focus();
+                    }
+                }
+            } catch (e) {
+                if (errEl) {
+                    errEl.innerText = '❌ Network connection error. Retry.';
+                    errEl.classList.remove('hidden');
+                }
+            } finally {
+                if (btn) btn.innerText = 'UNLOCK DASHBOARD';
+            }
+        }
+
+        function lockDashboard() {
+            authToken = '';
+            localStorage.removeItem('manisoft_stc_token');
+            const ls = document.getElementById('stcLockScreen');
+            if (ls) ls.classList.remove('hidden');
+            const input = document.getElementById('masterKeyInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', checkAuthOnLoad);
 
         function initChart() {
             const container = document.getElementById('chartContainer');
