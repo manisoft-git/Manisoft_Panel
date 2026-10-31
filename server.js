@@ -1589,6 +1589,7 @@ const server = http.createServer(async (req, res) => {
 
   // REST API: MT5 Cloud-to-Terminal Execution Bridge
   if (pathname === '/api/bridge/pending' && req.method === 'GET') {
+    lastBridgeSync = Date.now();
     return sendJSON(res, {
       status: 'OK',
       timestamp: Date.now(),

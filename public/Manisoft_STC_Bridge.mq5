@@ -60,11 +60,11 @@ void OnTimer()
    // 1. Process any pending orders queued from the Cloud Mission Control
    PollPendingOrders();
 
-   // 2. Sync account balance, equity, and live positions every 4 seconds
-   if(TimeCurrent() - ExtLastSyncTime >= 4)
+   // 2. Sync account balance, equity, and live positions every 4 seconds (uses TimeLocal for 24/7 weekend continuity)
+   if(TimeLocal() - ExtLastSyncTime >= 4)
    {
       SyncTelemetry();
-      ExtLastSyncTime = TimeCurrent();
+      ExtLastSyncTime = TimeLocal();
    }
 }
 

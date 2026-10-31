@@ -4,16 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Manisoft_STC_Bot // Sovereign Trade Commander</title>
+    <script src="/static/lightweight-charts.js"></script>
+    <script>
+        if (typeof LightweightCharts === 'undefined') {
+            document.write('<script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"><\/script>');
+        }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #06090e; color: #e2e8f0; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .cyber-card { background: rgba(13, 19, 33, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(0, 243, 255, 0.15); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
         .cyber-glow { box-shadow: 0 0 15px rgba(0, 243, 255, 0.25); }
-        .glow-green { box-shadow: 0 0 15px rgba(0, 255, 136, 0.3); }
-        .glow-red { box-shadow: 0 0 15px rgba(255, 51, 102, 0.4); }
+        .glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0b0f19; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #00f3ff; }
     </style>
 </head>
 <body class="min-h-screen p-3 md:p-6 pb-20">
@@ -22,20 +30,30 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-cyan-900/40">
         <div>
             <div class="flex items-center gap-2">
-                <span id="cloudPulse" class="inline-block w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="inline-block w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
                 <h1 class="text-xl md:text-2xl font-black tracking-wider text-cyan-400 font-mono">MANISOFT STC BOT</h1>
-                <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">CLOUD 24/7</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">v1.2.0</span>
             </div>
             <p class="text-xs text-slate-400 mt-0.5">Sovereign Trading Core // Operator: <span class="text-slate-200 font-semibold">Manifest Subeno</span></p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 md:gap-3 text-xs font-mono">
             <span id="botStateBadge" class="px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">ACTIVE</span>
-            <span id="bridgeBadge" class="px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-500/40">MT5 BRIDGE: STANDBY</span>
-            <span class="px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-700">MT5 DEMO #5058082931</span>
+            <span id="stratCountBadge" class="px-2.5 py-1 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-500/40">0 STRATEGIES ACTIVE</span>
+            <span id="accountBadge" class="px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-700">MT5 DEMO</span>
+            
+            <!-- Global Lot Size Input Widget in Header -->
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border border-cyan-800/80" title="Execution trade lot size for automated strategies and manual trades">
+                <span class="text-slate-400 font-bold">LOT:</span>
+                <input id="headerLotInput" type="number" step="0.01" min="0.01" value="0.01" onchange="this.dataset.userEdited='true'" class="w-14 bg-slate-950 border border-cyan-700/60 rounded px-1 py-0.5 text-cyan-300 font-bold text-center text-xs focus:outline-none focus:border-cyan-400" />
+                <button onclick="saveGlobalLotSize()" class="px-2 py-0.5 rounded bg-cyan-700/50 hover:bg-cyan-600 text-cyan-200 hover:text-white font-bold text-xs border border-cyan-500/50 transition">SET</button>
+            </div>
+
+            <button onclick="openAssetsModal()" id="assetsBtn" class="px-3 py-1 rounded bg-indigo-600/30 text-indigo-300 border border-indigo-500 hover:bg-indigo-600/50 transition">COMMODITIES</button>
+            <button onclick="openAccountModal()" id="accountLoginBtn" class="px-3 py-1 rounded bg-cyan-600/30 text-cyan-300 border border-cyan-500 hover:bg-cyan-600/50 transition">ACCOUNTS VAULT</button>
+            <button onclick="logoutAccount()" id="accountLogoutBtn" class="px-3 py-1 rounded bg-slate-800 text-slate-400 border border-slate-600 hover:bg-rose-900/40 hover:text-rose-300 hover:border-rose-500 transition">LOGOUT</button>
             <button onclick="toggleBot()" id="toggleBtn" class="px-3 py-1 rounded bg-amber-600/30 text-amber-300 border border-amber-500 hover:bg-amber-600/50 transition">PAUSE</button>
             <button onclick="triggerKillswitch()" class="px-3 py-1 rounded bg-rose-600 text-white font-bold hover:bg-rose-700 transition glow-red">KILLSWITCH</button>
-            <a href="/noc" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 hover:text-white transition border border-slate-700">NOC FLEET</a>
         </div>
     </header>
 
@@ -65,43 +83,43 @@
 
     <!-- Main Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        
-        <!-- Live Chart Container (2 Cols) -->
-        <div class="lg:col-span-2 cyber-card p-4 rounded-xl flex flex-col">
+        <!-- Interactive Chart -->
+        <div class="cyber-card p-4 rounded-xl lg:col-span-2 flex flex-col h-[480px]">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-3">
-                    <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono">LIVE CHART //</h2>
-                    <select id="chartSymbol" onchange="loadChartData()" class="bg-slate-900 border border-cyan-800 text-cyan-300 text-xs px-2 py-1 rounded font-mono">
-                        <option value="EURUSD">EURUSD</option>
-                        <option value="GBPUSD">GBPUSD</option>
-                    </select>
-                    <select id="chartTimeframe" onchange="loadChartData()" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs px-2 py-1 rounded font-mono">
-                        <option value="1m">1m</option>
-                        <option value="5m">5m</option>
-                        <option value="15m">15m</option>
-                        <option value="1h">1h</option>
-                    </select>
+                    <span class="text-sm font-bold text-slate-200 font-mono" id="activeChartSymbol">EURUSD</span>
+                    <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">15m M15</span>
                 </div>
-                <div id="currentPriceTag" class="text-sm font-mono font-bold text-cyan-400">---</div>
+                <div class="flex gap-2 text-xs font-mono">
+                    <button onclick="setChartSymbol('EURUSD')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">EURUSD</button>
+                    <button onclick="setChartSymbol('GBPUSD')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">GBPUSD</button>
+                    <button onclick="setChartSymbol('BTC/USDT')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">BTC</button>
+                </div>
             </div>
-            <div id="chartContainer" class="w-full h-72 md:h-96 rounded-lg overflow-hidden bg-slate-950/60"></div>
+            <div id="chartContainer" class="w-full flex-1 rounded-lg overflow-hidden bg-slate-950"></div>
         </div>
 
-        <!-- Fast Execution & Market Watch (1 Col) -->
-        <div class="cyber-card p-4 rounded-xl flex flex-col justify-between">
-            <div>
-                <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-3">MARKET WATCH // SPREAD</h2>
-                <div id="marketWatchList" class="space-y-2 mb-6">
-                    <!-- Dynamic Ticker rows -->
+        <!-- Right Side: Market Matrix & Quick Execution -->
+        <div class="space-y-6">
+            <!-- Market Watch List -->
+            <div class="cyber-card p-4 rounded-xl">
+                <h3 class="text-xs font-bold text-slate-400 font-mono mb-3 tracking-wider">LIVE MARKET MATRIX</h3>
+                <div id="marketWatchList" class="space-y-2 font-mono text-xs max-h-48 overflow-y-auto custom-scroll">
+                    <!-- Dynamic Tickers -->
                 </div>
+            </div>
 
-                <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-3">MICRO-ORDER // DEMO</h2>
-                <div class="space-y-3 text-xs font-mono">
+            <!-- Manual Order Quick Terminal -->
+            <div class="cyber-card p-4 rounded-xl font-mono text-xs">
+                <h3 class="text-xs font-bold text-slate-400 mb-3 tracking-wider">MICRO-EXECUTION TERMINAL</h3>
+                <div class="space-y-3">
                     <div>
-                        <label class="text-slate-400">Target Symbol</label>
+                        <label class="text-slate-400">Pair</label>
                         <select id="manualSymbol" class="w-full bg-slate-900 border border-slate-700 p-2 rounded mt-1 text-slate-200">
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="GBPUSD">GBPUSD</option>
+                            <option value="EURUSD">EURUSD (Forex Standard)</option>
+                            <option value="GBPUSD">GBPUSD (Forex Cable)</option>
+                            <option value="USDJPY">USDJPY (Forex Ninja)</option>
+                            <option value="BTC/USDT">BTC/USDT (Crypto Spot)</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -115,117 +133,410 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3 pt-2">
-                        <button onclick="placeOrder('BUY')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded transition font-mono glow-green">BUY (LONG)</button>
-                        <button onclick="placeOrder('SELL')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded transition font-mono glow-red">SELL (SHORT)</button>
+                        <button onclick="placeOrder('BUY')" class="w-full py-2.5 rounded bg-emerald-600 hover:bg-emerald-500 font-bold text-white transition">BUY / LONG</button>
+                        <button onclick="placeOrder('SELL')" class="w-full py-2.5 rounded bg-rose-600 hover:bg-rose-500 font-bold text-white transition">SELL / SHORT</button>
                     </div>
                 </div>
             </div>
-            
-            <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-500 font-mono">
-                Atomic SL (20 pips) & TP (40 pips) enforced automatically.
+        </div>
+    </div>
+
+    <!-- Lower Section: Active Positions & Strategy Management Matrix -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Open Positions -->
+        <div class="cyber-card p-4 rounded-xl flex flex-col">
+            <h3 class="text-xs font-bold text-slate-400 font-mono mb-3 tracking-wider">ACTIVE EXECUTIONS & POSITIONS</h3>
+            <div class="overflow-x-auto custom-scroll flex-1">
+                <table class="w-full text-left font-mono text-xs">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400">
+                            <th class="pb-2">SYMBOL</th>
+                            <th class="pb-2">SIDE</th>
+                            <th class="pb-2">LOTS</th>
+                            <th class="pb-2">ENTRY</th>
+                            <th class="pb-2">CURRENT</th>
+                            <th class="pb-2">SL</th>
+                            <th class="pb-2">TP</th>
+                            <th class="pb-2 text-right">UNREALIZED</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positionsTableBody">
+                        <tr><td colspan="8" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-    </div>
+        <!-- Strategy Matrix (Adam Khoo & Core Systems) -->
+        <div class="cyber-card p-4 rounded-xl flex flex-col h-[40rem]">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h3 class="text-xs font-bold text-slate-300 font-mono tracking-wider">QUANTITATIVE STRATEGY MATRIX // 100% WR LAWS & SOVEREIGN ROUTER</h3>
+                </div>
+                <span class="text-[11px] font-mono text-cyan-400 font-bold">Adam_K & Manisoft Apex Suite</span>
+            </div>
 
-    <!-- Active Positions Table -->
-    <div class="cyber-card p-4 rounded-xl mb-6">
-        <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-3">OPEN ACTIVE POSITIONS</h2>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs font-mono">
-                <thead>
-                    <tr class="text-slate-400 border-b border-slate-800">
-                        <th class="pb-2">Symbol</th>
-                        <th class="pb-2">Side</th>
-                        <th class="pb-2">Lots</th>
-                        <th class="pb-2">Entry Price</th>
-                        <th class="pb-2">Current Price</th>
-                        <th class="pb-2">Stop-Loss</th>
-                        <th class="pb-2">Take-Profit</th>
-                        <th class="pb-2 text-right">Unrealized PnL</th>
-                    </tr>
-                </thead>
-                <tbody id="positionsTableBody">
-                    <tr><td colspan="8" class="text-center py-4 text-slate-500">No active open positions. Watching market...</td></tr>
-                </tbody>
-            </table>
+            <!-- Interactive Commodity & Execution Universe Selector -->
+            <div class="p-3 mb-3 rounded-lg bg-slate-950/90 border border-slate-800/80 shadow-inner">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-bold text-amber-400 font-mono flex items-center gap-1.5">
+                            <span class="text-sm">🪙</span> <span>ACTIVE COMMODITIES & EXECUTION UNIVERSE:</span>
+                        </span>
+                        <span id="activeCommoditiesCountBadge" class="text-[10px] px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-700 font-mono font-bold">3 Active</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button onclick="setCommoditiesPreset('metals')" class="text-[10px] px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-600/60 transition cursor-pointer font-bold">🥇 Metals Only (Gold/Silver)</button>
+                        <button onclick="setCommoditiesPreset('commodities')" class="text-[10px] px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-yellow-300 border border-yellow-600/60 transition cursor-pointer font-bold">🛢️ All Commodities</button>
+                        <button onclick="setCommoditiesPreset('forex')" class="text-[10px] px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-600/60 transition cursor-pointer font-bold">💶 Forex Majors</button>
+                        <button onclick="setCommoditiesPreset('all')" class="text-[10px] px-2 py-0.5 rounded bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-600/60 transition cursor-pointer font-bold">🌐 Full Universe</button>
+                    </div>
+                </div>
+                <div id="quickCommodityChips" class="flex flex-wrap gap-1.5">
+                    <!-- Populated dynamically via renderQuickCommodityChips() -->
+                </div>
+            </div>
+
+            <div id="strategyHierarchyContainer" class="space-y-4 overflow-y-auto custom-scroll pr-1 flex-1 font-mono text-xs">
+                <!-- Dynamically populated strategy modules -->
+            </div>
         </div>
     </div>
 
-    <!-- Live Execution Audit Log -->
-    <div class="cyber-card p-4 rounded-xl">
-        <h2 class="text-sm font-bold tracking-wider text-slate-200 font-mono mb-2">AUTONOMOUS AUDIT LOG // TELEMETRY</h2>
-        <div id="auditLogBox" class="bg-slate-950/80 p-3 rounded-lg h-36 overflow-y-auto font-mono text-xs text-slate-400 space-y-1">
-            <div>Connecting to live telemetry feed...</div>
+    <!-- Real-time Audit Logs -->
+    <div class="cyber-card p-4 rounded-xl font-mono text-xs">
+        <h3 class="text-xs font-bold text-slate-400 mb-2 tracking-wider">ENGINE TELEMETRY & AUDIT LOGS</h3>
+        <div id="auditLogBox" class="bg-slate-950 p-3 rounded-lg h-32 overflow-y-auto custom-scroll text-slate-300 space-y-1">
+            <div>[SYSTEM] Initializing telemetry feeds...</div>
         </div>
     </div>
 
+    <!-- ======================================================================== -->
+    <!-- UNLIMITED MULTI-ACCOUNT VAULT & SETTINGS PROFILE MODAL -->
+    <!-- ======================================================================== -->
+    <div id="accountModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-3 md:p-4 z-50 overflow-y-auto">
+        <div class="cyber-card p-5 md:p-6 rounded-xl max-w-3xl w-full border border-cyan-500/40 font-mono shadow-2xl relative my-8">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-cyan-900/50">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <h2 class="text-base font-bold text-cyan-300 tracking-wider">MULTI-ACCOUNT VAULT // CUSTOM SETTINGS PROFILES</h2>
+                </div>
+                <button onclick="closeAccountModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+
+            <!-- Active Account Card Banner -->
+            <div id="modalActiveAccountBanner" class="p-3 mb-4 rounded-lg bg-cyan-950/40 border border-cyan-700/50 flex flex-wrap justify-between items-center gap-2">
+                <div>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ACTIVE TRADING ENGINE
+                    </div>
+                    <div id="modalActiveAccName" class="text-sm font-black text-white">Loading...</div>
+                    <div id="modalActiveAccDetails" class="text-xs text-slate-300 mt-0.5">...</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/50">ACTIVE</span>
+                    <button onclick="logoutAccount()" class="px-2.5 py-1 rounded text-xs bg-slate-800 text-slate-300 hover:text-rose-300 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-700 transition">Logout to Paper</button>
+                </div>
+            </div>
+
+            <!-- 3 Tabs: Saved Accounts vs Settings Profile vs Add Account -->
+            <div class="flex border-b border-cyan-900/60 mb-4 overflow-x-auto">
+                <button id="tabSavedBtn" onclick="switchAccountTab('saved')" class="px-4 py-2 text-xs font-bold border-b-2 border-cyan-400 text-cyan-300 transition whitespace-nowrap">
+                    SAVED ACCOUNTS (<span id="savedAccCount">0</span>)
+                </button>
+                <button id="tabSettingsBtn" onclick="switchAccountTab('settings')" class="px-4 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+                    ⚙️ ACCOUNT SETTINGS PROFILE (<span id="tabSettingsAccBadge">Active</span>)
+                </button>
+                <button id="tabAddBtn" onclick="switchAccountTab('add')" class="px-4 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+                    + ADD NEW ACCOUNT
+                </button>
+            </div>
+
+            <!-- Tab 1: Saved Accounts List with Settings Badges -->
+            <div id="tabSavedSection" class="space-y-2.5 max-h-[480px] overflow-y-auto custom-scroll pr-1">
+                <div id="savedAccountsList" class="space-y-2.5">
+                    <!-- Dynamic Account Cards injected here -->
+                </div>
+            </div>
+
+            <!-- Tab 2: Account Settings Profile Editor -->
+            <div id="tabSettingsSection" class="space-y-4 max-h-[520px] overflow-y-auto custom-scroll pr-1 hidden">
+                <!-- Account Selector -->
+                <div class="p-3 rounded-lg bg-indigo-950/30 border border-indigo-700/50 flex flex-wrap justify-between items-center gap-3">
+                    <div class="flex-1 min-w-[220px]">
+                        <label class="text-[10px] text-indigo-300 font-bold uppercase tracking-wider block">CONFIGURE SETTINGS FOR ACCOUNT:</label>
+                        <select id="profileAccountSelect" onchange="onProfileAccountSelectChange()" class="w-full bg-slate-900 border border-indigo-600 rounded p-1.5 text-xs text-white focus:outline-none focus:border-indigo-400 mt-1">
+                            <!-- Injected dynamically -->
+                        </select>
+                    </div>
+                    <div id="profileAccountActiveBadge" class="flex items-center gap-2">
+                        <!-- Shows ACTIVE or INACTIVE -->
+                    </div>
+                </div>
+
+                <!-- 1. Risk & Trade Sizing Section -->
+                <div class="p-3 rounded-lg bg-slate-900/90 border border-cyan-900/60 space-y-3">
+                    <div class="flex items-center justify-between border-b border-cyan-900/40 pb-1.5">
+                        <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                            <span>⚡</span> 1. EXECUTION SIZING & RISK CONTROLS
+                        </span>
+                        <span class="text-[10px] text-slate-400">Account-specific execution limits</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        <div>
+                            <label class="block text-slate-400 text-[11px] mb-1">Execution Lot Size</label>
+                            <input id="cfgLotSize" type="number" step="0.01" min="0.01" value="0.01" class="w-full bg-slate-950 border border-cyan-800 rounded p-1.5 text-cyan-300 font-bold text-xs focus:outline-none focus:border-cyan-400" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-[11px] mb-1">Daily Drawdown Cap ($)</label>
+                            <input id="cfgDailyDd" type="number" step="50" min="10" value="500" class="w-full bg-slate-950 border border-rose-900 rounded p-1.5 text-rose-300 font-bold text-xs focus:outline-none focus:border-rose-400" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-[11px] mb-1">Max Open Positions</label>
+                            <input id="cfgMaxPos" type="number" step="1" min="1" max="20" value="3" class="w-full bg-slate-950 border border-indigo-900 rounded p-1.5 text-indigo-300 font-bold text-xs focus:outline-none focus:border-indigo-400" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-[11px] mb-1">Execution Timeframe</label>
+                            <select id="cfgTimeframe" class="w-full bg-slate-950 border border-cyan-800 rounded p-1.5 text-cyan-300 font-bold text-xs focus:outline-none focus:border-cyan-400">
+                                <option value="1m">1m (Ultra Scalp)</option>
+                                <option value="5m">5m (Fast Scalp)</option>
+                                <option value="15m" selected>15m (Sweet Spot)</option>
+                                <option value="30m">30m (Intraday)</option>
+                                <option value="1h">1h (Session Swing)</option>
+                                <option value="4h">4h (Macro Law)</option>
+                                <option value="1d">1d (Daily Trend)</option>
+                                <option value="all">ALL (Multi-Timeframe)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Monitored Commodities & Assets Universe Section -->
+                <div class="p-3 rounded-lg bg-slate-900/90 border border-indigo-900/60 space-y-3">
+                    <div class="flex flex-wrap justify-between items-center border-b border-indigo-900/40 pb-1.5 gap-2">
+                        <span class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                            <span>🎯</span> 2. MONITORED COMMODITIES & ASSETS UNIVERSE
+                        </span>
+                        <span id="cfgSelectedSymCount" class="text-[11px] text-indigo-300 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-800 font-mono">0 Assets Selected</span>
+                    </div>
+
+                    <!-- Preset 1-Click Buttons -->
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Presets:</span>
+                        <button onclick="applyAssetPresetToCfg('metals')" class="px-2 py-0.5 rounded text-[11px] bg-amber-950/60 hover:bg-amber-900 text-amber-300 border border-amber-800 transition">🥇 Metals (Gold/Silver)</button>
+                        <button onclick="applyAssetPresetToCfg('commodities')" class="px-2 py-0.5 rounded text-[11px] bg-cyan-950/60 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition">🛢️ Commodities + Oil</button>
+                        <button onclick="applyAssetPresetToCfg('forex')" class="px-2 py-0.5 rounded text-[11px] bg-blue-950/60 hover:bg-blue-900 text-blue-300 border border-blue-800 transition">💶 Forex Majors</button>
+                        <button onclick="applyAssetPresetToCfg('all')" class="px-2 py-0.5 rounded text-[11px] bg-indigo-950/60 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 transition">🌐 All 5 Major Assets</button>
+                    </div>
+
+                    <!-- Interactive Clickable Chips Container -->
+                    <div id="cfgSymbolChips" class="flex flex-wrap gap-1.5 pt-1">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- 3. Strategy Selection & Profile Matrix Section -->
+                <div class="p-3 rounded-lg bg-slate-900/90 border border-cyan-900/60 space-y-3">
+                    <div class="flex flex-wrap justify-between items-center border-b border-cyan-900/40 pb-1.5 gap-2">
+                        <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                            <span>📈</span> 3. ACTIVE STRATEGY SUITE & PRESETS
+                        </span>
+                        <span id="cfgSelectedStratCount" class="text-[11px] text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800 font-mono">0 Strategies Active</span>
+                    </div>
+
+                    <!-- Strategy Quick Preset Buttons -->
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Presets:</span>
+                        <button onclick="applyStrategyPresetToCfg('manisoft_100wr')" class="px-2.5 py-1 rounded text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/70 hover:bg-emerald-900 transition glow-emerald">🌟 100% Win-Rate Only (5)</button>
+                        <button onclick="applyStrategyPresetToCfg('manisoft_all')" class="px-2.5 py-1 rounded text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/70 hover:bg-cyan-900 transition">⚡ Manisoft Sovereign (All 7)</button>
+                        <button onclick="applyStrategyPresetToCfg('portfolio_all')" class="px-2.5 py-1 rounded text-[11px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-500/70 hover:bg-indigo-900 transition">💎 Grand Combined (All 12)</button>
+                        <button onclick="applyStrategyPresetToCfg('conservative_hedged')" class="px-2.5 py-1 rounded text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-600 hover:bg-slate-700 transition">🛡️ Conservative Hedged (2)</button>
+                    </div>
+
+                    <!-- Grouped Strategy Checklist Container -->
+                    <div id="cfgStrategyList" class="space-y-3 pt-1">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Feedback Message Alert -->
+                <div id="cfgFeedback" class="hidden text-xs p-2.5 rounded font-mono"></div>
+
+                <!-- Action Controls -->
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-cyan-900/50">
+                    <button onclick="saveAccountSettings(false)" id="cfgSaveBtn" class="flex-1 py-2.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition cyber-glow">
+                        💾 SAVE SETTINGS FOR THIS ACCOUNT
+                    </button>
+                    <button onclick="saveAccountSettings(true)" id="cfgSaveApplyBtn" class="flex-1 py-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition glow-emerald">
+                        ⚡ SAVE & ACTIVATE / APPLY NOW
+                    </button>
+                    <button onclick="switchAccountTab('saved')" class="px-4 py-2.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">
+                        ← BACK TO ACCOUNTS
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab 3: Add Account Form -->
+            <div id="tabAddSection" class="space-y-3 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Trading Platform</label>
+                        <select id="accPlatform" onchange="updateAccountFormFields()" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-400">
+                            <option value="mt5">MetaTrader 5 (Forex / Gold / Indices)</option>
+                            <option value="bybit">Bybit (Crypto Spot / Futures)</option>
+                            <option value="binance">Binance (Crypto Spot / Futures)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Custom Account Label</label>
+                        <input id="accName" type="text" placeholder="e.g. Main MT5 Demo, Exness Live" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-white focus:outline-none focus:border-cyan-400">
+                    </div>
+                </div>
+
+                <!-- MT5 Specific Fields -->
+                <div id="mt5Fields" class="space-y-2.5 text-xs">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-slate-400 mb-1">MT5 Login ID / Username</label>
+                            <input id="accLogin" type="text" placeholder="5058082931" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-white focus:outline-none focus:border-cyan-400">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Broker Server Name</label>
+                            <input id="accServer" type="text" placeholder="MetaQuotes-Demo" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-white focus:outline-none focus:border-cyan-400">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">MT5 Password</label>
+                        <input id="accPassword" type="password" placeholder="••••••••••••" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-white focus:outline-none focus:border-cyan-400">
+                    </div>
+                </div>
+
+                <!-- Crypto API Specific Fields -->
+                <div id="cryptoFields" class="space-y-2.5 text-xs hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-slate-400 mb-1">API Key / Username</label>
+                            <input id="accApiKey" type="text" placeholder="API Key" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-white focus:outline-none focus:border-cyan-400">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Broker / Endpoint Label</label>
+                            <input id="accCryptoServer" type="text" placeholder="Cloud API" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-white focus:outline-none focus:border-cyan-400">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">API Secret</label>
+                        <input id="accApiSecret" type="password" placeholder="••••••••••••" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-white focus:outline-none focus:border-cyan-400">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs items-center">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Execution Mode</label>
+                        <select id="accMode" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-amber-300 focus:outline-none focus:border-amber-400">
+                            <option value="testnet">Demo / Testnet (Protected)</option>
+                            <option value="live">Live (Real Capital Execution)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Initial Settings Profile</label>
+                        <select id="accInitialPreset" class="w-full bg-slate-900 border border-cyan-900 rounded p-2 text-emerald-300 focus:outline-none focus:border-cyan-400">
+                            <option value="manisoft_100wr">🌟 100% Win-Rate Only (0.01 Lots, Metals+Oil)</option>
+                            <option value="manisoft_all">⚡ Manisoft Best Bet (0.01 Lots, All 7 Strats)</option>
+                            <option value="portfolio_all">💎 Grand Combined Portfolio (12 Strats)</option>
+                            <option value="conservative_hedged">🛡️ Conservative Hedged (2 Strats)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center gap-2">
+                    <input type="checkbox" id="accSetActive" checked class="w-4 h-4 rounded bg-slate-900 border-cyan-800 text-cyan-500 focus:ring-0">
+                    <label for="accSetActive" class="text-xs text-slate-300 cursor-pointer">Activate immediately upon saving</label>
+                </div>
+
+                <div id="accFeedback" class="hidden text-xs p-2.5 rounded"></div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="submitNewAccount()" id="accSubmitBtn" class="flex-1 py-2.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition cyber-glow">
+                        SAVE ACCOUNT & ACTIVATE
+                    </button>
+                    <button onclick="switchAccountTab('saved')" class="px-4 py-2.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">
+                        CANCEL
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-cyan-900/50 flex justify-end">
+                <button onclick="closeAccountModal()" class="px-4 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">
+                    CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client-side Logic -->
     <script>
-        let chart, candleSeries;
-        let isBotActive = true;
-        
+        let chart = null;
+        let candleSeries = null;
+        let currentSymbol = 'EURUSD';
+
         function initChart() {
-            try {
-                const container = document.getElementById('chartContainer');
-                if (!container) return;
-                container.innerHTML = '';
-
-                if (typeof LightweightCharts === 'undefined') {
-                    container.innerHTML = '<div class="flex items-center justify-center h-full text-cyan-400 font-mono text-xs">Connecting to Market Stream...</div>';
-                    setTimeout(initChart, 1000);
-                    return;
-                }
-
-                chart = LightweightCharts.createChart(container, {
-                    width: container.clientWidth || 800,
-                    height: container.clientHeight || 360,
-                    layout: { background: { color: 'transparent' }, textColor: '#94a3b8' },
-                    grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
-                    crosshair: { mode: LightweightCharts.CrosshairMode ? LightweightCharts.CrosshairMode.Normal : 1 },
-                    rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
-                    timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true, secondsVisible: false }
-                });
-
-                const seriesOpts = {
-                    upColor: '#10b981', downColor: '#ef4444',
-                    borderUpColor: '#10b981', borderDownColor: '#ef4444',
-                    wickUpColor: '#10b981', wickDownColor: '#ef4444'
-                };
-
-                if (typeof chart.addCandlestickSeries === 'function') {
-                    candleSeries = chart.addCandlestickSeries(seriesOpts);
-                } else if (typeof chart.addSeries === 'function' && LightweightCharts.CandlestickSeries) {
-                    candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, seriesOpts);
-                }
-
-                window.addEventListener('resize', () => {
-                    if (chart && container) {
-                        chart.resize(container.clientWidth, container.clientHeight);
-                    }
-                });
-                loadChartData();
-            } catch (e) {
-                console.error("Chart init error:", e);
+            const container = document.getElementById('chartContainer');
+            if (!container) return;
+            if (typeof LightweightCharts === 'undefined') {
+                setTimeout(initChart, 250);
+                return;
             }
+            if (chart) return;
+
+            chart = LightweightCharts.createChart(container, {
+                width: container.clientWidth || 800,
+                height: container.clientHeight || 360,
+                layout: { background: { color: '#090d16' }, textColor: '#94a3b8' },
+                grid: { vertLines: { color: 'rgba(30, 41, 59, 0.4)' }, horzLines: { color: 'rgba(30, 41, 59, 0.4)' } },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#1e293b' },
+                rightPriceScale: { borderColor: '#1e293b' }
+            });
+
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#10b981', downColor: '#f43f5e',
+                borderVisible: false,
+                wickUpColor: '#10b981', wickDownColor: '#f43f5e'
+            });
+
+            window.addEventListener('resize', () => {
+                if (chart && container) chart.resize(container.clientWidth, container.clientHeight);
+            });
+            loadChartData();
         }
 
         async function loadChartData() {
-            const sym = document.getElementById('chartSymbol').value;
-            const tf = document.getElementById('chartTimeframe').value;
+            if (!candleSeries) return;
             try {
-                const res = await fetch(`/api/candles/${sym}?timeframe=${tf}&limit=100`);
-                const data = await res.json();
-                if (data && data.length > 0 && candleSeries) {
-                    candleSeries.setData(data);
+                const symParam = currentSymbol.replace('/', '-');
+                const res = await fetch(`/api/candles/${symParam}?timeframe=15m&limit=100`);
+                const candles = await res.json();
+                if (Array.isArray(candles) && candles.length > 0) {
+                    candleSeries.setData(candles);
                     if (chart && chart.timeScale) {
                         chart.timeScale().fitContent();
                     }
-                    const lastBar = data[data.length - 1];
-                    document.getElementById('currentPriceTag').innerText = `$${lastBar.close.toFixed(5)}`;
+                    const lastBar = candles[candles.length - 1];
+                    const priceEl = document.getElementById('currentPriceTag');
+                    if (priceEl && lastBar) {
+                        priceEl.innerText = '$' + lastBar.close.toFixed(lastBar.close > 50 ? 2 : 5);
+                    }
                 }
-            } catch (err) {
-                console.error("Chart load error:", err);
+            } catch (e) {
+                console.error("Candle fetch error:", e);
             }
+        }
+
+        function setChartSymbol(sym) {
+            currentSymbol = sym;
+            document.getElementById('activeChartSymbol').innerText = sym;
+            loadChartData();
         }
 
         async function updateStatus() {
@@ -241,7 +552,7 @@
                 pnlEl.className = `text-xl md:text-2xl font-black font-mono ${data.daily_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-1`;
 
                 const cbEl = document.getElementById('cbStatusVal');
-                if (data.circuit_breaker && data.circuit_breaker.tripped) {
+                if (data.circuit_breaker.tripped) {
                     cbEl.innerText = "TRIPPED";
                     cbEl.className = "text-xl md:text-2xl font-black font-mono text-rose-500 mt-1";
                 } else {
@@ -249,35 +560,65 @@
                     cbEl.className = "text-xl md:text-2xl font-black font-mono text-emerald-400 mt-1";
                 }
 
-                // MT5 Cloud-to-Terminal Bridge state
-                const bBadge = document.getElementById('bridgeBadge');
-                if (bBadge && data.bridge) {
-                    if (data.bridge.connected) {
-                        bBadge.innerText = 'MT5 BRIDGE: ONLINE (VPS)';
-                        bBadge.className = 'px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 glow-green';
-                    } else {
-                        bBadge.innerText = 'MT5 BRIDGE: STANDBY';
-                        bBadge.className = 'px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-500/40';
+                if (data.active_strategies_count !== undefined) {
+                    document.getElementById('stratCountBadge').innerText = `${data.active_strategies_count} STRATEGIES ACTIVE`;
+                }
+
+                if (data.account) {
+                    const acc = data.account;
+                    const badge = document.getElementById('accountBadge');
+                    if (badge) {
+                        badge.innerText = `${acc.platform_name.toUpperCase()} ${acc.mode.toUpperCase()} ${acc.display_id}`;
+                    }
+                }
+
+                // Sync lot size inputs if not actively edited
+                if (data.lot_size !== undefined) {
+                    const headerInput = document.getElementById('headerLotInput');
+                    if (headerInput && !headerInput.dataset.userEdited) {
+                        headerInput.value = data.lot_size;
+                    }
+                    const manualInput = document.getElementById('manualLots');
+                    if (manualInput && !manualInput.dataset.userEdited) {
+                        manualInput.value = data.lot_size;
                     }
                 }
 
                 // Market watch
-                if (data.market) {
-                    let mwHtml = '';
-                    for (const [sym, info] of Object.entries(data.market)) {
-                        mwHtml += `
-                            <div class="flex justify-between items-center p-2 rounded bg-slate-900/60 border border-slate-800">
-                                <div>
-                                    <span class="font-bold text-slate-200">${sym}</span>
-                                    <span class="text-[10px] text-slate-500 ml-2">Spread: ${info.spread_pct || 0.0}%</span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-cyan-300 font-bold">$${(info.price || 0.0).toFixed(5)}</span>
-                                </div>
+                let mwHtml = '';
+                for (const [sym, info] of Object.entries(data.market || {})) {
+                    const priceVal = (info && info.price !== undefined && info.price !== null) ? Number(info.price) : 0.0;
+                    const priceDisplay = priceVal > 100 ? priceVal.toFixed(2) : priceVal.toFixed(5);
+                    const spreadVal = (info && info.spread_pct !== undefined) ? info.spread_pct : 0.0;
+                    mwHtml += `
+                        <div class="flex justify-between items-center p-2 rounded bg-slate-900/60 border border-slate-800">
+                            <div>
+                                <span class="font-bold text-slate-200">${sym}</span>
+                                <span class="text-[10px] text-slate-500 ml-2">Spread: ${spreadVal}%</span>
                             </div>
-                        `;
+                            <div class="text-right">
+                                <span class="text-cyan-300 font-bold">$${priceDisplay}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                document.getElementById('marketWatchList').innerHTML = mwHtml;
+
+                // Sync manual order symbols dropdown with active commodities/assets
+                if (data.active_symbols && Array.isArray(data.active_symbols)) {
+                    activeAssetsList = data.active_symbols;
+                    renderQuickCommodityChips();
+                    const sel = document.getElementById('manualSymbol');
+                    const curSel = sel.value;
+                    let opts = '';
+                    for (const sym of data.active_symbols) {
+                        const label = sym === 'XAUUSD' ? 'XAUUSD (Gold Spot / Futures)' : 
+                                     (sym === 'XAGUSD' ? 'XAGUSD (Silver Spot)' : 
+                                     (sym === 'WTI' || sym === 'USOUSD' ? `${sym} (Crude Oil)` : `${sym}`));
+                        opts += `<option value="${sym}">${label}</option>`;
                     }
-                    document.getElementById('marketWatchList').innerHTML = mwHtml;
+                    sel.innerHTML = opts;
+                    if (data.active_symbols.includes(curSel)) sel.value = curSel;
                 }
 
                 // Open positions
@@ -287,18 +628,23 @@
                 } else {
                     let rows = '';
                     for (const pos of data.open_positions) {
-                        const pnlColor = pos.unrealized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                        const pnlColor = (pos.unrealized_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
                         const sideColor = pos.side === 'BUY' ? 'text-emerald-400' : 'text-rose-400';
+                        const entryDisp = pos.entry_price ? (pos.entry_price > 100 ? pos.entry_price.toFixed(2) : pos.entry_price.toFixed(5)) : '0.00';
+                        const curDisp = pos.current_price ? (pos.current_price > 100 ? pos.current_price.toFixed(2) : pos.current_price.toFixed(5)) : '0.00';
+                        const slDisp = pos.stop_loss ? (pos.stop_loss > 100 ? pos.stop_loss.toFixed(2) : pos.stop_loss.toFixed(5)) : 'None';
+                        const tpDisp = pos.take_profit ? (pos.take_profit > 100 ? pos.take_profit.toFixed(2) : pos.take_profit.toFixed(5)) : 'None';
+                        const pnlDisp = (pos.unrealized_pnl !== undefined && pos.unrealized_pnl !== null) ? Number(pos.unrealized_pnl).toFixed(2) : '0.00';
                         rows += `
                             <tr class="border-b border-slate-800/50 hover:bg-slate-900/40">
                                 <td class="py-2.5 font-bold text-slate-200">${pos.symbol}</td>
                                 <td class="py-2.5 font-bold ${sideColor}">${pos.side}</td>
                                 <td class="py-2.5">${pos.quantity}</td>
-                                <td class="py-2.5">$${pos.entry_price.toFixed(5)}</td>
-                                <td class="py-2.5">$${pos.current_price.toFixed(5)}</td>
-                                <td class="py-2.5 text-rose-400">$${pos.stop_loss.toFixed(5)}</td>
-                                <td class="py-2.5 text-emerald-400">$${pos.take_profit.toFixed(5)}</td>
-                                <td class="py-2.5 text-right font-bold ${pnlColor}">$${pos.unrealized_pnl.toFixed(2)}</td>
+                                <td class="py-2.5">$${entryDisp}</td>
+                                <td class="py-2.5">$${curDisp}</td>
+                                <td class="py-2.5 text-rose-400">$${slDisp}</td>
+                                <td class="py-2.5 text-emerald-400">$${tpDisp}</td>
+                                <td class="py-2.5 text-right font-bold ${pnlColor}">$${pnlDisp}</td>
                             </tr>
                         `;
                     }
@@ -306,10 +652,8 @@
                 }
 
                 // Logs
-                if (data.logs) {
-                    const logBox = document.getElementById('auditLogBox');
-                    logBox.innerHTML = data.logs.map(l => `<div>${l}</div>`).join('');
-                }
+                const logBox = document.getElementById('auditLogBox');
+                logBox.innerHTML = data.logs.map(l => `<div>${l}</div>`).join('');
 
             } catch (err) {
                 console.error("Status fetch error:", err);
@@ -326,12 +670,7 @@
         async function toggleBot() {
             const res = await fetch('/api/toggle', { method: 'POST' });
             const data = await res.json();
-            isBotActive = data.bot_active;
-            document.getElementById('toggleBtn').innerText = isBotActive ? 'PAUSE' : 'RESUME';
-            document.getElementById('botStateBadge').innerText = isBotActive ? 'ACTIVE' : 'PAUSED';
-            document.getElementById('botStateBadge').className = isBotActive ? 
-                'px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40' : 
-                'px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-500/40';
+            document.getElementById('toggleBtn').innerText = data.bot_active ? 'PAUSE' : 'RESUME';
             updateStatus();
         }
 
@@ -350,11 +689,996 @@
             updateStatus();
         }
 
+        let strategyData = null;
+
+        async function loadStrategies() {
+            try {
+                const res = await fetch('/api/strategies');
+                strategyData = await res.json();
+                renderStrategyHierarchy();
+            } catch (err) {
+                console.error("Strategy fetch error:", err);
+            }
+        }
+
+        function renderStrategyHierarchy() {
+            const container = document.getElementById('strategyHierarchyContainer');
+            if (!strategyData || !container) return;
+
+            let html = '';
+            for (const [folder, strats] of Object.entries(strategyData)) {
+                const activeCount = strats.filter(s => s.active).length;
+                const allActive = activeCount === strats.length;
+
+                html += `
+                    <div class="border border-slate-800 rounded-lg p-3 bg-slate-900/40">
+                        <div class="flex flex-wrap justify-between items-center gap-2 mb-2.5 pb-2 border-b border-slate-800/60">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-cyan-400 text-xs uppercase tracking-wider">${folder}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono ${allActive ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-300'}">(${activeCount}/${strats.length} Active)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="applyBestBet('${folder}')" id="bestBetBtn_${folder}" class="text-[11px] font-black px-3 py-1 rounded bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 text-slate-950 hover:from-amber-400 hover:to-yellow-200 shadow-[0_0_12px_rgba(245,158,11,0.45)] hover:shadow-[0_0_16px_rgba(245,158,11,0.7)] transition flex items-center gap-1.5 cursor-pointer transform active:scale-95 font-sans" title="⚡ Calibrate & activate all strategies in ${folder} to their mathematically optimal 100% / High-Win-Rate timeframes and parameters">
+                                    <span>⚡</span> <span>BEST BET</span>
+                                </button>
+                                <button onclick="toggleFolder('${folder}', ${!allActive})" class="text-[10px] px-2.5 py-1 rounded font-bold ${allActive ? 'bg-amber-950 text-amber-400 border border-amber-800 hover:bg-amber-900' : 'bg-emerald-950 text-emerald-400 border border-emerald-800 hover:bg-emerald-900'} transition cursor-pointer">
+                                    ${allActive ? 'DEACTIVATE ALL' : 'ACTIVATE ALL'}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                `;
+
+                for (const st of strats) {
+                    const tf = (st.timeframe || '15m').toLowerCase();
+                    const wr = st.win_rate || '';
+                    const is100 = wr.includes('100.0%');
+                    const isHighWr = wr.includes('8') || wr.includes('9');
+                    
+                    const badgeClass = is100 
+                        ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.35)]'
+                        : (isHighWr 
+                            ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-500/80 shadow-[0_0_6px_rgba(6,182,212,0.25)]'
+                            : 'bg-slate-900 text-slate-300 border border-slate-700');
+
+                    html += `
+                        <div class="p-2.5 rounded bg-slate-950 border ${is100 ? 'border-emerald-900/60' : 'border-slate-800/80'} hover:border-cyan-800/60 transition flex flex-col justify-between gap-1.5">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="font-bold text-slate-100 text-[11px]">${st.name}</span>
+                                        ${wr ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${wr}</span>` : ''}
+                                    </div>
+                                    <div class="text-[9px] text-slate-400 mt-0.5 line-clamp-2">${st.doc}</div>
+                                    ${st.law ? `<div class="text-[9px] text-purple-300/90 font-mono mt-1 flex items-center gap-1"><span>⚖</span> <span>${st.law}</span></div>` : ''}
+                                    ${st.frequency ? `<div class="text-[9px] text-amber-300/90 font-mono flex items-center gap-1 mt-0.5"><span>⚡</span> <span>Freq: ${st.frequency}</span> • <span>Dur: ${st.avg_duration || 'Dynamic'}</span></div>` : ''}
+                                </div>
+                                <div class="flex items-center space-x-1.5 shrink-0 pt-0.5">
+                                    <select onchange="updateStrategyTimeframe('${st.name}', this.value)" class="bg-slate-900 border border-slate-700 text-cyan-400 font-mono text-[10px] rounded px-1.5 py-0.5 focus:border-cyan-500 focus:outline-none cursor-pointer" title="Select execution timeframe (or All)">
+                                        <option value="5m" ${tf === '5m' ? 'selected' : ''}>5m</option>
+                                        <option value="15m" ${tf === '15m' ? 'selected' : ''}>15m</option>
+                                        <option value="30m" ${tf === '30m' ? 'selected' : ''}>30m</option>
+                                        <option value="1h" ${tf === '1h' ? 'selected' : ''}>1h</option>
+                                        <option value="4h" ${tf === '4h' ? 'selected' : ''}>4h</option>
+                                        <option value="12h" ${tf === '12h' ? 'selected' : ''}>12h</option>
+                                        <option value="1d" ${tf === '1d' ? 'selected' : ''}>1d</option>
+                                        <option value="all" ${tf === 'all' ? 'selected' : ''}>All</option>
+                                    </select>
+                                    <input type="checkbox" ${st.active ? 'checked' : ''} onchange="toggleStrategy('${folder}', '${st.name}', this.checked)" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0 cursor-pointer" title="Toggle active/inactive">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `</div></div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        async function updateStrategyTimeframe(name, timeframe) {
+            try {
+                const res = await fetch('/api/strategies/timeframe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, timeframe })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    await loadStrategies();
+                    updateStatus();
+                }
+            } catch (e) {
+                console.error("Strategy timeframe update failed:", e);
+            }
+        }
+
+        async function toggleStrategy(folder, name, active) {
+            try {
+                const res = await fetch('/api/strategies/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, active })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    await loadStrategies();
+                    updateStatus();
+                }
+            } catch (e) {
+                console.error("Strategy toggle failed:", e);
+            }
+        }
+
+        async function toggleFolder(folder, active) {
+            try {
+                const res = await fetch('/api/strategies/folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder, active })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    await loadStrategies();
+                    updateStatus();
+                }
+            } catch (e) {
+                console.error("Folder toggle failed:", e);
+            }
+        }
+
+        async function applyBestBet(folder) {
+            const btn = document.getElementById(`bestBetBtn_${folder}`);
+            const originalHtml = btn ? btn.innerHTML : '';
+            try {
+                if (btn) {
+                    btn.innerHTML = `<span>⏳</span> <span>CALIBRATING...</span>`;
+                    btn.disabled = true;
+                }
+                const res = await fetch('/api/strategies/best-bet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    await loadStrategies();
+                    await loadAssetsCatalog();
+                    updateStatus();
+                    alert(`⚡ BEST BET CALIBRATED FOR ${folder}!\n\n` + 
+                          `All ${data.applied_count} strategies have been automatically armed at their mathematically optimal 100% / High-Win-Rate timeframes and parameters:\n\n` +
+                          data.strategies.map(s => `• ${s.name} → [${s.timeframe.toUpperCase()}]`).join('\n') +
+                          (data.active_symbols ? `\n\nActive Commodities & Assets: ${data.active_symbols.join(', ')}` : '')
+                    );
+                } else {
+                    alert(`Error applying Best Bet: ${data.detail || JSON.stringify(data)}`);
+                }
+            } catch (err) {
+                alert(`Best Bet failed: ${err.message}`);
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        // ======================================================================
+        // COMMODITY & ASSET UNIVERSE UI LOGIC
+        // ======================================================================
+
+        let activeAssetsList = [];
+        let fullAssetsCatalog = [];
+
+        const COMMODITY_PRESETS = {
+            metals: ['XAUUSD', 'XAGUSD'],
+            commodities: ['XAUUSD', 'XAGUSD', 'WTI', 'USOUSD'],
+            forex: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD'],
+            all: ['XAUUSD', 'XAGUSD', 'WTI', 'EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD']
+        };
+
+        const POPULAR_COMMODITIES = [
+            { symbol: 'XAUUSD', label: '🥇 Gold (XAUUSD)', category: 'Precious Metals' },
+            { symbol: 'XAGUSD', label: '🥈 Silver (XAGUSD)', category: 'Precious Metals' },
+            { symbol: 'WTI', label: '🛢️ Crude Oil (WTI)', category: 'Commodity' },
+            { symbol: 'USOUSD', label: '🛢️ US Oil (USO)', category: 'Commodity' },
+            { symbol: 'EURUSD', label: '💶 Euro (EURUSD)', category: 'Forex' },
+            { symbol: 'GBPUSD', label: '💷 Cable (GBPUSD)', category: 'Forex' },
+            { symbol: 'USDJPY', label: '🇯🇵 Yen (USDJPY)', category: 'Forex' },
+            { symbol: 'BTCUSD', label: '₿ Bitcoin (BTCUSD)', category: 'Crypto' }
+        ];
+
+        function renderQuickCommodityChips() {
+            const container = document.getElementById('quickCommodityChips');
+            if (!container) return;
+
+            let html = '';
+            for (const item of POPULAR_COMMODITIES) {
+                const isActive = activeAssetsList.includes(item.symbol);
+                const activeClass = isActive 
+                    ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.35)]' 
+                    : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200';
+
+                html += `
+                    <button onclick="toggleQuickCommodity('${item.symbol}')" class="px-2.5 py-1 rounded text-[10px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${activeClass}" title="Click to ${isActive ? 'remove' : 'add'} ${item.symbol} from monitored universe">
+                        <span class="font-mono ${isActive ? 'text-emerald-400' : 'text-slate-500'}">${isActive ? '✓' : '+'}</span>
+                        <span>${item.label}</span>
+                    </button>
+                `;
+            }
+            container.innerHTML = html;
+
+            const countBadge = document.getElementById('activeCommoditiesCountBadge');
+            if (countBadge) {
+                countBadge.innerText = `${activeAssetsList.length} Active`;
+            }
+        }
+
+        async function toggleQuickCommodity(symbol) {
+            try {
+                const res = await fetch('/api/assets/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    activeAssetsList = data.active_symbols;
+                    renderQuickCommodityChips();
+                    updateStatus();
+                } else {
+                    alert(data.detail || 'Could not toggle commodity');
+                }
+            } catch (e) {
+                console.error("Toggle commodity error:", e);
+            }
+        }
+
+        async function setCommoditiesPreset(presetKey) {
+            const symbols = COMMODITY_PRESETS[presetKey];
+            if (!symbols) return;
+            try {
+                const res = await fetch('/api/assets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbols })
+                });
+                const data = await res.json();
+                if (data.status === 'SUCCESS') {
+                    activeAssetsList = data.active_symbols;
+                    renderQuickCommodityChips();
+                    updateStatus();
+                }
+            } catch (e) {
+                console.error("Set commodity preset error:", e);
+            }
+        }
+
+        function openAssetsModal() {
+            document.getElementById("assetsModal").classList.remove("hidden");
+            loadAssetsCatalog();
+        }
+
+        function closeAssetsModal() {
+            document.getElementById("assetsModal").classList.add("hidden");
+        }
+
+        async function loadAssetsCatalog() {
+            try {
+                const res = await fetch("/api/assets");
+                const data = await res.json();
+                activeAssetsList = data.active_symbols || [];
+                fullAssetsCatalog = data.catalog || [];
+                renderQuickCommodityChips();
+
+                // Render Active Pills
+                const pillsContainer = document.getElementById("activeAssetsPills");
+                pillsContainer.innerHTML = activeAssetsList.map(s => `
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-900 text-indigo-200 border border-indigo-600">${s}</span>
+                `).join('');
+
+                // Render Catalog Checklist
+                const listContainer = document.getElementById("assetsCatalogList");
+                let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">';
+                
+                // Merge any active symbol that is not in catalog
+                const catalogSymbols = new Set(fullAssetsCatalog.map(c => c.symbol));
+                const allItems = [...fullAssetsCatalog];
+                for (const act of activeAssetsList) {
+                    if (!catalogSymbols.has(act)) {
+                        allItems.push({ symbol: act, name: `${act} Custom`, category: "Custom", unit: "unit" });
+                    }
+                }
+
+                for (const it of allItems) {
+                    const isChecked = activeAssetsList.includes(it.symbol);
+                    const catColor = it.category === "Commodity" ? "text-amber-400" : (it.category === "Forex" ? "text-cyan-400" : "text-emerald-400");
+                    html += `
+                        <div class="p-2.5 rounded bg-slate-950 border ${isChecked ? 'border-indigo-500/60 bg-indigo-950/20' : 'border-slate-800'} flex justify-between items-center text-xs">
+                            <div>
+                                <div class="font-bold text-slate-100 flex items-center gap-1.5">
+                                    <span>${it.symbol}</span>
+                                    <span class="text-[10px] font-normal ${catColor}">(${it.category})</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400">${it.name}</div>
+                            </div>
+                            <input type="checkbox" value="${it.symbol}" ${isChecked ? 'checked' : ''} onchange="toggleAssetCheckbox('${it.symbol}', this.checked)" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0 cursor-pointer">
+                        </div>
+                    `;
+                }
+                html += '</div>';
+                listContainer.innerHTML = html;
+
+            } catch (e) {
+                console.error("Failed to load assets catalog", e);
+            }
+        }
+
+        function toggleAssetCheckbox(symbol, checked) {
+            symbol = symbol.toUpperCase();
+            if (checked) {
+                if (!activeAssetsList.includes(symbol)) activeAssetsList.push(symbol);
+            } else {
+                if (activeAssetsList.length <= 1) {
+                    alert("At least one commodity or pair must remain active.");
+                    loadAssetsCatalog();
+                    return;
+                }
+                activeAssetsList = activeAssetsList.filter(s => s !== symbol);
+            }
+            // Update pills
+            const pillsContainer = document.getElementById("activeAssetsPills");
+            pillsContainer.innerHTML = activeAssetsList.map(s => `
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-900 text-indigo-200 border border-indigo-600">${s}</span>
+            `).join('');
+        }
+
+        function addCustomAsset() {
+            const input = document.getElementById("customAssetInput");
+            const val = input.value.trim().toUpperCase();
+            if (!val) return;
+            if (!activeAssetsList.includes(val)) {
+                activeAssetsList.push(val);
+                input.value = "";
+                loadAssetsCatalog();
+            }
+        }
+
+        async function saveAssetsSelection() {
+            const btn = document.getElementById("saveAssetsBtn");
+            const fb = document.getElementById("assetFeedback");
+            btn.disabled = true;
+            fb.className = "text-xs p-2.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800 block";
+            fb.innerText = "Applying commodities and readjusting engine...";
+
+            try {
+                const res = await fetch("/api/assets", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ symbols: activeAssetsList })
+                });
+                const result = await res.json();
+                if (result.status === "SUCCESS") {
+                    fb.className = "text-xs p-2.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800 block";
+                    fb.innerText = `Successfully configured ${result.active_symbols.length} commodities/pairs!`;
+                    setTimeout(() => {
+                        fb.classList.add("hidden");
+                        closeAssetsModal();
+                        updateStatus();
+                    }, 1200);
+                } else {
+                    fb.className = "text-xs p-2.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800 block";
+                    fb.innerText = "Error updating assets.";
+                }
+            } catch (e) {
+                fb.className = "text-xs p-2.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800 block";
+                fb.innerText = "Error: " + e.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ======================================================================
+        // MULTI-ACCOUNT VAULT & PER-ACCOUNT CUSTOM SETTINGS CONTROLLER
+        // ======================================================================
+
+        let vaultData = null;
+        let editingAccountId = null;
+        let cfgSelectedSymbols = [];
+        let cfgSelectedStrategies = [];
+
+        function openAccountModal() {
+            document.getElementById("accountModal").classList.remove("hidden");
+            loadAccountsVault();
+        }
+
+        function closeAccountModal() {
+            document.getElementById("accountModal").classList.add("hidden");
+        }
+
+        function switchAccountTab(tab) {
+            const savedSection = document.getElementById("tabSavedSection");
+            const settingsSection = document.getElementById("tabSettingsSection");
+            const addSection = document.getElementById("tabAddSection");
+            const savedBtn = document.getElementById("tabSavedBtn");
+            const settingsBtn = document.getElementById("tabSettingsBtn");
+            const addBtn = document.getElementById("tabAddBtn");
+
+            const activeClass = "px-4 py-2 text-xs font-bold border-b-2 border-cyan-400 text-cyan-300 transition whitespace-nowrap";
+            const inactiveClass = "px-4 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition whitespace-nowrap";
+
+            savedSection.classList.add("hidden");
+            settingsSection.classList.add("hidden");
+            addSection.classList.add("hidden");
+            savedBtn.className = inactiveClass;
+            settingsBtn.className = inactiveClass;
+            addBtn.className = inactiveClass;
+
+            if (tab === 'saved') {
+                savedSection.classList.remove("hidden");
+                savedBtn.className = activeClass;
+            } else if (tab === 'settings') {
+                settingsSection.classList.remove("hidden");
+                settingsBtn.className = activeClass;
+                if (!editingAccountId && vaultData && vaultData.active) {
+                    populateSettingsEditor(vaultData.active.id);
+                }
+            } else if (tab === 'add') {
+                addSection.classList.remove("hidden");
+                addBtn.className = activeClass;
+            }
+        }
+
+        function updateAccountFormFields() {
+            const plat = document.getElementById("accPlatform").value;
+            if (plat === "mt5") {
+                document.getElementById("mt5Fields").classList.remove("hidden");
+                document.getElementById("cryptoFields").classList.add("hidden");
+            } else {
+                document.getElementById("mt5Fields").classList.add("hidden");
+                document.getElementById("cryptoFields").classList.remove("hidden");
+            }
+        }
+
+        async function loadAccountsVault() {
+            try {
+                const res = await fetch("/api/accounts");
+                const data = await res.json();
+                vaultData = data;
+
+                // Active account banner
+                const act = data.active;
+                document.getElementById("modalActiveAccName").innerText = act.name;
+                document.getElementById("modalActiveAccDetails").innerText = `${act.platform_name} | ID: ${act.display_id} | Server: ${act.server || 'Direct'} | Mode: ${act.mode.toUpperCase()}`;
+                document.getElementById("tabSettingsAccBadge").innerText = act.name;
+
+                // Saved accounts list
+                const accounts = data.accounts || [];
+                document.getElementById("savedAccCount").innerText = accounts.length;
+
+                const listEl = document.getElementById("savedAccountsList");
+                if (accounts.length === 0) {
+                    listEl.innerHTML = `<div class="p-4 rounded-lg bg-slate-900 text-center text-slate-400 text-xs">No saved accounts found. Click '+ ADD NEW ACCOUNT' above to register your MT5 or exchange keys.</div>`;
+                } else {
+                    let html = '';
+                    for (const acc of accounts) {
+                        const isActive = acc.is_active;
+                        const st = acc.settings || { lot_size: 0.01, symbols: ['EURUSD', 'GBPUSD', 'XAUUSD'], timeframe: '15m', daily_drawdown_cap: 500.0, max_open_positions: 3, active_strategies: [] };
+                        const symCount = st.symbols ? st.symbols.length : 0;
+                        const stratCount = st.active_strategies ? st.active_strategies.length : 0;
+                        const symsPreview = st.symbols ? st.symbols.slice(0, 3).join(', ') + (st.symbols.length > 3 ? ` (+${st.symbols.length - 3})` : '') : 'None';
+
+                        html += `
+                            <div class="p-3.5 rounded-lg ${isActive ? 'bg-cyan-950/40 border border-cyan-500/60 shadow-lg shadow-cyan-950/50' : 'bg-slate-900 border border-slate-800'} flex flex-col gap-2.5">
+                                <div class="flex flex-wrap justify-between items-center gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-slate-100 text-sm">${acc.name}</span>
+                                        <span class="px-1.5 py-0.2 rounded text-[10px] ${acc.mode === 'live' ? 'bg-amber-950 text-amber-300 border border-amber-700' : 'bg-indigo-950 text-indigo-300 border border-indigo-700'}">${acc.mode.toUpperCase()}</span>
+                                        <span class="px-1.5 py-0.2 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">${acc.platform.toUpperCase()}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        ${isActive ? 
+                                            '<span class="px-2.5 py-1 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/60">★ ACTIVE</span>' : 
+                                            `<button onclick="switchAccount('${acc.id}')" class="px-3 py-1 rounded text-xs bg-cyan-600/40 hover:bg-cyan-600 text-cyan-200 hover:text-white border border-cyan-500/60 transition">SWITCH</button>`
+                                        }
+                                        <button onclick="openAccountSettingsEditor('${acc.id}')" class="px-2.5 py-1 rounded text-xs bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/50 transition flex items-center gap-1" title="Configure settings profile for this account">⚙️ SETTINGS</button>
+                                        <button onclick="deleteAccount('${acc.id}', '${acc.name}')" class="px-2 py-1 rounded text-xs bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700 transition" title="Delete account">🗑️</button>
+                                    </div>
+                                </div>
+                                <div class="text-[11px] text-slate-400">
+                                    ID: <span class="text-slate-200 font-mono">${acc.display_id}</span> | Server: <span class="text-slate-200">${acc.server}</span> | Pass: <span class="text-slate-500">${acc.password}</span>
+                                </div>
+                                <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5 text-[11px]">
+                                    <span class="px-2 py-0.5 rounded bg-slate-800/90 text-cyan-300 border border-cyan-900/60 font-mono" title="Execution lot size">⚡ ${st.lot_size.toFixed(2)} Lots</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-800/90 text-indigo-300 border border-indigo-900/60 font-mono" title="Active commodities">${symsPreview}</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-800/90 text-amber-300 border border-amber-900/60 font-mono" title="Execution timeframe">⏱️ ${(st.timeframe || '15m').toUpperCase()}</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-800/90 text-rose-300 border border-rose-900/60 font-mono" title="Daily drawdown cap">🛡️ Cap: $${st.daily_drawdown_cap}</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-800/90 text-emerald-300 border border-emerald-900/60 font-mono" title="Armed strategies">📈 ${stratCount} Strats</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    listEl.innerHTML = html;
+                }
+
+                // Populate account selector dropdown in Tab 2
+                const sel = document.getElementById("profileAccountSelect");
+                if (sel) {
+                    sel.innerHTML = accounts.map(a => `<option value="${a.id}" ${(editingAccountId ? a.id === editingAccountId : a.is_active) ? 'selected' : ''}>${a.name} (${a.display_id}) ${a.is_active ? '★ [ACTIVE]' : ''}</option>`).join('');
+                }
+
+                if (editingAccountId) {
+                    populateSettingsEditor(editingAccountId);
+                } else if (act && act.id) {
+                    populateSettingsEditor(act.id);
+                }
+            } catch (e) {
+                console.error("Failed to load accounts vault", e);
+            }
+        }
+
+        function openAccountSettingsEditor(accountId) {
+            editingAccountId = accountId;
+            switchAccountTab('settings');
+            populateSettingsEditor(accountId);
+        }
+
+        function onProfileAccountSelectChange() {
+            const sel = document.getElementById("profileAccountSelect");
+            if (sel) {
+                editingAccountId = sel.value;
+                populateSettingsEditor(sel.value);
+            }
+        }
+
+        function populateSettingsEditor(accountId) {
+            if (!vaultData || !vaultData.accounts) return;
+            const acc = vaultData.accounts.find(a => a.id === accountId) || vaultData.active;
+            if (!acc) return;
+
+            editingAccountId = acc.id;
+            const st = acc.settings || {
+                lot_size: 0.01,
+                symbols: ['EURUSD', 'GBPUSD', 'XAUUSD'],
+                timeframe: '15m',
+                daily_drawdown_cap: 500.0,
+                max_open_positions: 3,
+                active_strategies: []
+            };
+
+            // Badge & Name updates
+            document.getElementById("tabSettingsAccBadge").innerText = acc.name;
+            const badgeEl = document.getElementById("profileAccountActiveBadge");
+            if (badgeEl) {
+                badgeEl.innerHTML = acc.is_active ? 
+                    '<span class="px-2.5 py-1 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/60">★ CURRENTLY ACTIVE</span>' : 
+                    '<span class="px-2.5 py-1 rounded text-[11px] font-bold bg-slate-800 text-slate-400 border border-slate-700">INACTIVE PROFILE</span>';
+            }
+
+            // Sync dropdown selection
+            const sel = document.getElementById("profileAccountSelect");
+            if (sel && sel.value !== acc.id) {
+                sel.value = acc.id;
+            }
+
+            // Section 1 inputs
+            document.getElementById("cfgLotSize").value = st.lot_size || 0.01;
+            document.getElementById("cfgDailyDd").value = st.daily_drawdown_cap || 500;
+            document.getElementById("cfgMaxPos").value = st.max_open_positions || 3;
+            document.getElementById("cfgTimeframe").value = st.timeframe || "15m";
+
+            // Section 2 symbols
+            cfgSelectedSymbols = [...(st.symbols || ['EURUSD', 'GBPUSD', 'XAUUSD'])];
+            renderCfgSymbolChips();
+
+            // Section 3 strategies
+            cfgSelectedStrategies = [...(st.active_strategies || [])];
+            renderCfgStrategyChecklist();
+
+            // Clear feedback
+            const fb = document.getElementById("cfgFeedback");
+            if (fb) fb.className = "hidden text-xs p-2.5 rounded font-mono";
+        }
+
+        function renderCfgSymbolChips() {
+            const container = document.getElementById("cfgSymbolChips");
+            if (!container || !vaultData) return;
+
+            const catalog = vaultData.catalog || [
+                { symbol: "XAUUSD", name: "Gold", category: "Commodity" },
+                { symbol: "XAGUSD", name: "Silver", category: "Commodity" },
+                { symbol: "WTI", name: "Crude Oil", category: "Commodity" },
+                { symbol: "USOUSD", name: "US Oil", category: "Commodity" },
+                { symbol: "EURUSD", name: "Euro", category: "Forex" },
+                { symbol: "GBPUSD", name: "Cable", category: "Forex" },
+                { symbol: "USDJPY", name: "Yen", category: "Forex" },
+                { symbol: "AUDUSD", name: "Aussie", category: "Forex" },
+                { symbol: "USDCAD", name: "Loonie", category: "Forex" },
+                { symbol: "BTCUSD", name: "Bitcoin", category: "Crypto" },
+                { symbol: "ETHUSD", name: "Ethereum", category: "Crypto" }
+            ];
+
+            let html = '';
+            for (const item of catalog) {
+                const isSel = cfgSelectedSymbols.includes(item.symbol);
+                const icon = item.symbol.includes("XAU") ? "🥇" : (item.symbol.includes("XAG") ? "🥈" : (item.symbol.includes("WTI") || item.symbol.includes("USO") ? "🛢️" : (item.symbol.includes("BTC") ? "₿" : (item.symbol.includes("ETH") ? "Ξ" : "💱"))));
+                html += `
+                    <button onclick="toggleCfgSymbol('${item.symbol}')" class="px-2.5 py-1 rounded text-xs transition flex items-center gap-1.5 ${isSel ? 'bg-indigo-950/90 text-indigo-200 border border-indigo-500/80 font-bold shadow-md shadow-indigo-950/50' : 'bg-slate-950/60 text-slate-400 border border-slate-800 hover:border-slate-600'}">
+                        <span>${icon}</span>
+                        <span>${item.symbol}</span>
+                        <span class="text-[10px] ${isSel ? 'text-emerald-400 font-bold' : 'text-slate-500'}">${isSel ? '✔' : '+'}</span>
+                    </button>
+                `;
+            }
+            container.innerHTML = html;
+
+            const countEl = document.getElementById("cfgSelectedSymCount");
+            if (countEl) countEl.innerText = `${cfgSelectedSymbols.length} Assets Selected`;
+        }
+
+        function toggleCfgSymbol(symbol) {
+            symbol = symbol.toUpperCase().trim();
+            if (cfgSelectedSymbols.includes(symbol)) {
+                if (cfgSelectedSymbols.length <= 1) {
+                    alert("At least one commodity or currency pair must remain selected.");
+                    return;
+                }
+                cfgSelectedSymbols = cfgSelectedSymbols.filter(s => s !== symbol);
+            } else {
+                cfgSelectedSymbols.push(symbol);
+            }
+            renderCfgSymbolChips();
+        }
+
+        function applyAssetPresetToCfg(presetKey) {
+            if (!vaultData || !vaultData.asset_presets) return;
+            const p = vaultData.asset_presets[presetKey];
+            if (p && p.symbols) {
+                cfgSelectedSymbols = [...p.symbols];
+                renderCfgSymbolChips();
+            }
+        }
+
+        function renderCfgStrategyChecklist() {
+            const container = document.getElementById("cfgStrategyList");
+            if (!container) return;
+
+            const strategyDefs = [
+                {
+                    folder: "Manisoft Sovereign Suite (Verified Trading Laws)",
+                    badge: "100.0% WR INSTITUTIONAL",
+                    badgeClass: "bg-emerald-950 text-emerald-300 border-emerald-800",
+                    items: [
+                        { id: "manisoft_trend_rider", name: "Adaptive Trend Rider (VR-ATR)", desc: "Law of Value Area Retest", wr: "100.0% WR ★★★", pf: "PF: 99.00" },
+                        { id: "manisoft_fvg_imbalance", name: "Fair Value Gap (FVG-IF)", desc: "Law of Consequent Encroachment", wr: "100.0% WR ★★★", pf: "PF: 99.00" },
+                        { id: "manisoft_mean_reversion_zscore", name: "Mean Reversion Z-Score (MR-ZScore)", desc: "Law of Statistical Sigma Exhaustion", wr: "100.0% WR ★★★", pf: "PF: 99.00" },
+                        { id: "manisoft_liquidity_sweep", name: "Liquidity Sweep (IL-OBR)", desc: "Law of Absorption Wick Sweep", wr: "100.0% WR ★★★", pf: "PF: 99.00" },
+                        { id: "manisoft_basis_arbitrage", name: "Delta-Neutral Basis Arbitrage", desc: "Cash & Carry Basis Convergence", wr: "100.0% WR ★★★", pf: "PF: 99.00" },
+                        { id: "manisoft_session_breakout", name: "Session Momentum Breakout (Session-MB)", desc: "Session Box Kinetic Expansion", wr: "86.2% WR ★", pf: "PF: 4.06" },
+                        { id: "manisoft_alpha_router", name: "Sovereign Alpha Router (APEX)", desc: "Apex Dynamic Multi-Asset Portfolio Router", wr: "66.6% WR", pf: "PF: 2.59" }
+                    ]
+                },
+                {
+                    folder: "Adam Khoo Momentum Suite",
+                    badge: "TREND MOMENTUM & CONFLUENCE",
+                    badgeClass: "bg-cyan-950 text-cyan-300 border-cyan-800",
+                    items: [
+                        { id: "adam_k_trend_pullback", name: "Trend Pullback (EMA Bounce)", desc: "Multi-EMA confluence pullbacks", wr: "65.0% WR", pf: "PF: 2.10" },
+                        { id: "adam_k_divergence_reversal", name: "Divergence Reversal (MACD/RSI)", desc: "Exhaustion divergence reversal", wr: "62.0% WR", pf: "PF: 1.95" },
+                        { id: "adam_k_range_bounce", name: "Support/Resistance Range Bounce", desc: "Key horizontal boundary mean reversion", wr: "60.0% WR", pf: "PF: 1.85" },
+                        { id: "adam_k_consolidation_breakout", name: "Consolidation Breakout", desc: "Kinetic volatility expansion", wr: "61.5% WR", pf: "PF: 2.05" },
+                        { id: "adam_k_fibonacci_confluence", name: "Fibonacci Retracement Confluence", desc: "Golden pocket (61.8%) bounce", wr: "64.0% WR", pf: "PF: 2.15" }
+                    ]
+                }
+            ];
+
+            let html = '';
+            for (const grp of strategyDefs) {
+                html += `
+                    <div class="p-2.5 rounded bg-slate-950/80 border border-slate-800 space-y-2">
+                        <div class="flex flex-wrap justify-between items-center gap-1">
+                            <span class="text-[11px] font-bold text-slate-200">${grp.folder}</span>
+                            <span class="px-1.5 py-0.2 rounded text-[9px] font-mono border ${grp.badgeClass}">${grp.badge}</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                `;
+                for (const item of grp.items) {
+                    const isChecked = cfgSelectedStrategies.includes(item.id);
+                    html += `
+                        <label class="p-2 rounded flex items-start gap-2.5 cursor-pointer transition border ${isChecked ? 'bg-indigo-950/40 border-indigo-500/70' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'}">
+                            <input type="checkbox" onchange="toggleCfgStrategy('${item.id}')" ${isChecked ? 'checked' : ''} class="w-4 h-4 rounded bg-slate-950 border-cyan-800 text-cyan-500 focus:ring-0 mt-0.5">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="text-xs font-bold text-slate-100 truncate">${item.name}</span>
+                                    <span class="text-[10px] font-bold ${item.wr.includes('100') ? 'text-emerald-400' : 'text-cyan-300'} font-mono">${item.wr}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 truncate">${item.desc} | <span class="text-slate-300">${item.pf}</span></div>
+                            </div>
+                        </label>
+                    `;
+                }
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            const countEl = document.getElementById("cfgSelectedStratCount");
+            if (countEl) countEl.innerText = `${cfgSelectedStrategies.length} Strategies Active`;
+        }
+
+        function toggleCfgStrategy(stratId) {
+            if (cfgSelectedStrategies.includes(stratId)) {
+                cfgSelectedStrategies = cfgSelectedStrategies.filter(s => s !== stratId);
+            } else {
+                cfgSelectedStrategies.push(stratId);
+            }
+            renderCfgStrategyChecklist();
+        }
+
+        function applyStrategyPresetToCfg(presetKey) {
+            if (!vaultData || !vaultData.strategy_presets) return;
+            const p = vaultData.strategy_presets[presetKey];
+            if (p && p.strategies) {
+                cfgSelectedStrategies = [...p.strategies];
+                renderCfgStrategyChecklist();
+            }
+        }
+
+        async function saveAccountSettings(applyNow) {
+            if (!editingAccountId) {
+                alert("No account selected to configure.");
+                return;
+            }
+
+            const fb = document.getElementById("cfgFeedback");
+            const btnSave = document.getElementById("cfgSaveBtn");
+            const btnApply = document.getElementById("cfgSaveApplyBtn");
+            btnSave.disabled = true;
+            btnApply.disabled = true;
+
+            fb.className = "text-xs p-2.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800 block";
+            fb.innerText = applyNow ? "Saving profile settings and switching active engine..." : "Saving profile settings for account...";
+
+            const payload = {
+                lot_size: parseFloat(document.getElementById("cfgLotSize").value) || 0.01,
+                daily_drawdown_cap: parseFloat(document.getElementById("cfgDailyDd").value) || 500.0,
+                max_open_positions: parseInt(document.getElementById("cfgMaxPos").value) || 3,
+                timeframe: document.getElementById("cfgTimeframe").value || "15m",
+                symbols: cfgSelectedSymbols,
+                active_strategies: cfgSelectedStrategies
+            };
+
+            try {
+                const res = await fetch(`/api/accounts/${editingAccountId}/settings`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ settings: payload, apply_now: applyNow })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    fb.className = "text-xs p-2.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800 block";
+                    fb.innerText = result.message + (result.is_active ? " (Active in engine)" : "");
+                    await loadAccountsVault();
+                    await loadStrategies();
+                    await loadAssetsCatalog();
+                    updateStatus();
+                    setTimeout(() => {
+                        fb.classList.add("hidden");
+                    }, 3000);
+                } else {
+                    fb.className = "text-xs p-2.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800 block";
+                    fb.innerText = result.message || "Failed to update account settings.";
+                }
+            } catch (e) {
+                fb.className = "text-xs p-2.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800 block";
+                fb.innerText = "Error: " + e.message;
+            } finally {
+                btnSave.disabled = false;
+                btnApply.disabled = false;
+            }
+        }
+
+        async function switchAccount(id) {
+            try {
+                const res = await fetch("/api/accounts/switch", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    await loadAccountsVault();
+                    await loadStrategies();
+                    await loadAssetsCatalog();
+                    updateStatus();
+                } else {
+                    alert(result.message || "Switch failed.");
+                }
+            } catch (e) {
+                alert("Error switching account: " + e.message);
+            }
+        }
+
+        async function deleteAccount(id, name) {
+            if (!confirm(`Are you sure you want to delete account '${name}' from your vault?`)) return;
+            try {
+                const res = await fetch("/api/accounts/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    await loadAccountsVault();
+                    await loadStrategies();
+                    await loadAssetsCatalog();
+                    updateStatus();
+                } else {
+                    alert(result.message || "Delete failed.");
+                }
+            } catch (e) {
+                alert("Error deleting account: " + e.message);
+            }
+        }
+
+        async function submitNewAccount() {
+            const fb = document.getElementById("accFeedback");
+            const btn = document.getElementById("accSubmitBtn");
+            fb.className = "text-xs p-2.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800 block";
+            fb.innerText = "Saving account to vault and calibrating engine...";
+            btn.disabled = true;
+
+            const plat = document.getElementById("accPlatform").value;
+            const mode = document.getElementById("accMode").value;
+            const name = document.getElementById("accName").value;
+            const setActive = document.getElementById("accSetActive").checked;
+            const presetKey = document.getElementById("accInitialPreset").value;
+
+            let payload = {
+                platform: plat,
+                mode: mode,
+                name: name,
+                set_active: setActive
+            };
+
+            if (plat === "mt5") {
+                payload.login = document.getElementById("accLogin").value;
+                payload.password = document.getElementById("accPassword").value;
+                payload.server = document.getElementById("accServer").value;
+            } else {
+                payload.api_key = document.getElementById("accApiKey").value;
+                payload.api_secret = document.getElementById("accApiSecret").value;
+                payload.server = document.getElementById("accCryptoServer").value;
+            }
+
+            // Attach initial preset settings
+            if (vaultData && vaultData.strategy_presets && vaultData.strategy_presets[presetKey]) {
+                payload.settings = {
+                    lot_size: 0.01,
+                    symbols: ['EURUSD', 'GBPUSD', 'XAUUSD', 'XAGUSD', 'WTI'],
+                    timeframe: '15m',
+                    daily_drawdown_cap: 500.0,
+                    max_open_positions: 3,
+                    strategy_preset: presetKey,
+                    active_strategies: vaultData.strategy_presets[presetKey].strategies
+                };
+            }
+
+            try {
+                const res = await fetch("/api/accounts/add", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    fb.className = "text-xs p-2.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800 block";
+                    fb.innerText = result.message;
+                    // Reset form fields
+                    document.getElementById("accName").value = "";
+                    document.getElementById("accLogin").value = "";
+                    document.getElementById("accPassword").value = "";
+                    document.getElementById("accApiKey").value = "";
+                    document.getElementById("accApiSecret").value = "";
+                    setTimeout(() => {
+                        fb.classList.add("hidden");
+                        switchAccountTab("saved");
+                        loadAccountsVault();
+                        loadStrategies();
+                        loadAssetsCatalog();
+                        updateStatus();
+                    }, 1200);
+                } else {
+                    fb.className = "text-xs p-2.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800 block";
+                    fb.innerText = result.message || "Failed to add account.";
+                }
+            } catch (e) {
+                fb.className = "text-xs p-2.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800 block";
+                fb.innerText = "Error: " + e.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function logoutAccount() {
+            if (!confirm("Are you sure you want to log out and switch to Paper Trading Sandbox?")) return;
+            try {
+                const res = await fetch("/api/account/logout", { method: "POST" });
+                const result = await res.json();
+                alert(result.message || "Logged out.");
+                await loadAccountsVault();
+                await loadStrategies();
+                await loadAssetsCatalog();
+                updateStatus();
+            } catch (e) {
+                alert("Logout error: " + e.message);
+            }
+        }
+
+        async function saveGlobalLotSize() {
+            const input = document.getElementById("headerLotInput");
+            const val = parseFloat(input.value);
+            if (isNaN(val) || val <= 0) {
+                alert("Please enter a valid lot size greater than 0.");
+                return;
+            }
+            try {
+                const res = await fetch("/api/lotsize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ lot_size: val })
+                });
+                const result = await res.json();
+                if (result.status === "SUCCESS") {
+                    input.value = result.lot_size;
+                    document.getElementById("manualLots").value = result.lot_size;
+                    document.getElementById("modalLotInput").value = result.lot_size;
+                    input.dataset.userEdited = "false";
+                    alert(`Trade lot size successfully updated to ${result.lot_size.toFixed(2)} lots.`);
+                    updateStatus();
+                }
+            } catch (e) {
+                alert("Failed to update lot size: " + e.message);
+            }
+        }
+
+        async function saveModalLotSize() {
+            const input = document.getElementById("modalLotInput");
+            const val = parseFloat(input.value);
+            if (isNaN(val) || val <= 0) {
+                alert("Please enter a valid lot size greater than 0.");
+                return;
+            }
+            try {
+                const res = await fetch("/api/lotsize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ lot_size: val })
+                });
+                const result = await res.json();
+                if (result.status === "SUCCESS") {
+                    input.value = result.lot_size;
+                    document.getElementById("headerLotInput").value = result.lot_size;
+                    document.getElementById("manualLots").value = result.lot_size;
+                    alert(`Trade lot size successfully updated to ${result.lot_size.toFixed(2)} lots.`);
+                    updateStatus();
+                }
+            } catch (e) {
+                alert("Failed to update lot size: " + e.message);
+            }
+        }
+
         window.onload = () => {
-            try { initChart(); } catch (e) { console.error("Init chart load error:", e); }
-            try { updateStatus(); } catch (e) { console.error("Update status load error:", e); }
+            initChart();
+            loadChartData();
+            updateStatus();
+            loadStrategies();
+            loadAssetsCatalog();
             setInterval(() => { try { updateStatus(); } catch (e) {} }, 3000);
-            setInterval(() => { try { loadChartData(); } catch (e) {} }, 5000);
+            setInterval(() => { try { loadChartData(); } catch (e) {} }, 8000);
         };
     </script>
 </body>
