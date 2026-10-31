@@ -62,7 +62,7 @@
             <!-- Global Lot Size Input Widget in Header -->
             <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border border-cyan-800/80" title="Execution trade lot size for automated strategies and manual trades">
                 <span class="text-slate-400 font-bold">LOT:</span>
-                <input id="headerLotInput" type="number" step="0.01" min="0.01" value="0.01" onchange="this.dataset.userEdited='true'" class="w-14 bg-slate-950 border border-cyan-700/60 rounded px-1 py-0.5 text-cyan-300 font-bold text-center text-xs focus:outline-none focus:border-cyan-400" />
+                <input id="headerLotInput" type="number" step="0.01" min="0.01" value="0.01" class="w-16 bg-slate-950 border border-cyan-700/60 rounded px-1.5 py-0.5 text-cyan-300 font-bold text-center text-xs focus:outline-none focus:border-cyan-400" title="Active trade lot size" />
                 <button onclick="saveGlobalLotSize()" class="px-2 py-0.5 rounded bg-cyan-700/50 hover:bg-cyan-600 text-cyan-200 hover:text-white font-bold text-xs border border-cyan-500/50 transition">SET</button>
             </div>
 
@@ -845,16 +845,15 @@
                     }
                 }
 
-                // Sync lot size inputs if not actively edited
-                if (data.lot_size !== undefined) {
-                    const headerInput = document.getElementById('headerLotInput');
-                    if (headerInput && !headerInput.dataset.userEdited) {
-                        headerInput.value = data.lot_size;
-                    }
-                    const manualInput = document.getElementById('manualLots');
-                    if (manualInput && !manualInput.dataset.userEdited) {
-                        manualInput.value = data.lot_size;
-                    }
+                // Sync lot size inputs from live server telemetry & active account settings
+                const liveLot = (data.lot_size != null) ? data.lot_size : ((data.active_account && data.active_account.settings && data.active_account.settings.lot_size) || 0.01);
+                const headerInput = document.getElementById('headerLotInput');
+                if (headerInput && document.activeElement !== headerInput) {
+                    headerInput.value = Number(liveLot).toFixed(2);
+                }
+                const manualInput = document.getElementById('manualLots');
+                if (manualInput && document.activeElement !== manualInput) {
+                    manualInput.value = Number(liveLot).toFixed(2);
                 }
 
                 // Market watch
@@ -2119,11 +2118,12 @@
                 });
                 const result = await res.json();
                 if (result.status === "SUCCESS") {
-                    input.value = result.lot_size;
-                    document.getElementById("manualLots").value = result.lot_size;
-                    document.getElementById("modalLotInput").value = result.lot_size;
-                    input.dataset.userEdited = "false";
-                    alert(`Trade lot size successfully updated to ${result.lot_size.toFixed(2)} lots.`);
+                    const formattedLot = Number(result.lot_size).toFixed(2);
+                    input.value = formattedLot;
+                    if (document.getElementById("manualLots")) document.getElementById("manualLots").value = formattedLot;
+                    if (document.getElementById("modalLotInput")) document.getElementById("modalLotInput").value = formattedLot;
+                    if (document.getElementById("cfgLotSize")) document.getElementById("cfgLotSize").value = formattedLot;
+                    alert(`Trade lot size successfully updated to ${formattedLot} lots.`);
                     updateStatus();
                 } else {
                     alert("Failed to update lot size: " + (result.error || result.message || 'Unauthorized'));
@@ -2167,44 +2167,10 @@
             updateStatus();
             loadStrategies();
             loadAssetsCatalog();
+            loadAccountsVault();
             setInterval(() => { try { updateStatus(); } catch (e) {} }, 3000);
             setInterval(() => { try { loadChartData(); } catch (e) {} }, 8000);
         };
     </script>
 </body>
-</htmlupdateStatus();
-                    const lines = [
-                        ⚡ BEST BET CALIBRATED FOR !,
-                        '',
-                        All  strategies have been automatically armed & reset to their mathematically proven highest win-rate settings:,
-                        ''
-                    ];
-                    if (Array.isArray(data.strategies)) {
-                        for (const s of data.strategies) {
-                            lines.push(• );
-                            lines.push(  └─ Timeframe: [] | SL:  pips | TP:  pips (1:R));
-                        }
-                    }
-                    if (data.active_symbols && data.active_symbols.length > 0) {
-                        lines.push('');
-                        lines.push(Active Commodities & Assets: );
-                    }
-                    alert(lines.join('\n'));
-                const lines = [
-                        ⚡ BEST BET CALIBRATED FOR !,
-                        '',
-                        All  strategies have been automatically armed & reset to their mathematically proven highest win-rate settings:,
-                        ''
-                    ];
-                    if (Array.isArray(data.strategies)) {
-                        for (const s of data.strategies) {
-                            lines.push(• );
-                            lines.push(  └─ Timeframe: [] | SL:  pips | TP:  pips (1:R));
-                        }
-                    }
-                    if (data.active_symbols && data.active_symbols.length > 0) {
-                        lines.push('');
-                        lines.push(Active Commodities & Assets: );
-                    }
-                    alert(lines.join('\n'));
-                >
+</html>
