@@ -954,11 +954,37 @@
                 
                 const eqSub = document.getElementById('equitySub');
                 if (eqSub) {
-                    const isLive = data.bridge && data.bridge.connected;
+                    const isMt5Live = data.bridge && data.bridge.connected;
                     const unpnl = data.unrealized_pnl || 0.0;
+                    const bMode = data.broker_mode || 'simultaneous';
+
+                    let statusLabel = 'Live Deriv API';
+                    let dotColor = 'bg-emerald-400 animate-pulse';
+                    let textColor = 'text-emerald-300 font-bold';
+
+                    if (bMode === 'simultaneous') {
+                        statusLabel = isMt5Live ? 'Live Dual (MT5 + Deriv API)' : 'Live Deriv API (Synced)';
+                        dotColor = 'bg-emerald-400 animate-pulse';
+                        textColor = 'text-emerald-300 font-bold';
+                    } else if (bMode === 'deriv') {
+                        statusLabel = 'Live Deriv Direct API';
+                        dotColor = 'bg-emerald-400 animate-pulse';
+                        textColor = 'text-emerald-300 font-bold';
+                    } else if (bMode === 'mt5') {
+                        if (isMt5Live) {
+                            statusLabel = 'Live MT5 Terminal';
+                            dotColor = 'bg-emerald-400 animate-pulse';
+                            textColor = 'text-emerald-300 font-bold';
+                        } else {
+                            statusLabel = 'MT5 Terminal Standby';
+                            dotColor = 'bg-amber-400';
+                            textColor = 'text-amber-300 font-semibold';
+                        }
+                    }
+
                     eqSub.innerHTML = `
-                        <span class="inline-block w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'} mr-1"></span>
-                        <span class="${isLive ? 'text-emerald-300 font-bold' : 'text-slate-400'}">${isLive ? 'Live MT5' : 'Offline / Simulated'}</span>
+                        <span class="inline-block w-2 h-2 rounded-full ${dotColor} mr-1"></span>
+                        <span class="${textColor}">${statusLabel}</span>
                         <span class="text-slate-500 ml-1.5">Unrealized: ${unpnl >= 0 ? '+' : ''}$${unpnl.toFixed(2)}</span>
                     `;
                 }
