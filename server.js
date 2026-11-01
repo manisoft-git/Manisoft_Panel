@@ -2614,9 +2614,18 @@ const server = http.createServer(async (req, res) => {
 
   // REST API: MT5 Cloud-to-Terminal Execution Bridge
   if (pathname === '/api/bridge/pending' && req.method === 'GET') {
+    const act = getActiveAccount();
+    const actSymbols = (act && act.settings && act.settings.symbols) || ['XAUUSD', 'XAGUSD', 'WTI', 'EURUSD', 'GBPUSD'];
+    const lotSize = (act && act.settings && act.settings.lot_size) || 0.01;
+    const accData = loadAccountsData();
+    const brokerMode = accData.broker_mode || 'simultaneous';
     return sendJSON(res, {
       status: 'OK',
       timestamp: Date.now(),
+      bot_active: stcBotActive,
+      lot_size: lotSize,
+      active_symbols: actSymbols,
+      broker_mode: brokerMode,
       orders: pendingBridgeOrders
     });
   }
@@ -2651,7 +2660,20 @@ const server = http.createServer(async (req, res) => {
             }
           }
         }
-        return sendJSON(res, { status: 'SYNCED', received_positions: (data.positions || []).length, received_trades: (data.closed_trades || []).length });
+        const act = getActiveAccount();
+        const actSymbols = (act && act.settings && act.settings.symbols) || ['XAUUSD', 'XAGUSD', 'WTI', 'EURUSD', 'GBPUSD'];
+        const lotSize = (act && act.settings && act.settings.lot_size) || 0.01;
+        const accData = loadAccountsData();
+        const brokerMode = accData.broker_mode || 'simultaneous';
+        return sendJSON(res, {
+          status: 'SYNCED',
+          bot_active: stcBotActive,
+          lot_size: lotSize,
+          active_symbols: actSymbols,
+          broker_mode: brokerMode,
+          received_positions: (data.positions || []).length,
+          received_trades: (data.closed_trades || []).length
+        });
       } catch (e) {
         return sendJSON(res, { status: 'ERROR', error: e.message }, 400);
       }
