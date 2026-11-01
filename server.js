@@ -1202,6 +1202,8 @@ setInterval(rotateNonceIfExpired, 10000);
 // Periodically pings all ManiSoft Render services to prevent cold-sleep spin-downs
 // ============================================================================
 const FLEET_KEEP_ALIVE_URLS = [
+  'https://manisoft-panel-hepk.onrender.com/stc.html',
+  'https://manisoft-panel-hepk.onrender.com/api/status',
   'https://manisoft-stc-bot.onrender.com',
   'https://manisoft-lumina-a6sk.onrender.com',
   'https://manisoft-passmaster-ai-jc1n.onrender.com',
@@ -1227,9 +1229,9 @@ function pingFleetKeepAlive() {
   });
 }
 
-// Warm up fleet on startup, then ping every 8 minutes
+// Warm up fleet on startup, then ping every 4 minutes (guarantees Render never sleeps)
 setTimeout(pingFleetKeepAlive, 5000);
-setInterval(pingFleetKeepAlive, 8 * 60 * 1000);
+setInterval(pingFleetKeepAlive, 4 * 60 * 1000);
 
 const SOVEREIGN_MASTER_SECRET = process.env.MASTER_SECRET || '$$manisoft11stc';
 
