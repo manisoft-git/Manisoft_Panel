@@ -13,3 +13,4 @@ PUBLIC_ONLINE_URL.txt
 render.json
 static/*.mp4
 
+.env
