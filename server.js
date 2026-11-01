@@ -463,7 +463,7 @@ function getActiveAccount() {
 }
 
 let stcBotActive = true;
-let stcDemoEquity = 100000.0;
+let stcDemoEquity = 10000.0;
 let stcOpenPositions = [];
 let stcClosedTrades = [
   {
@@ -670,10 +670,10 @@ function calculateTradeSummary(trades) {
 
 let pendingBridgeOrders = [];
 let lastBridgeSync = 0;
-let mt5AccountInfo = { account: 5058082931, broker: 'MetaQuotes-Demo', balance: 100000.0, margin_free: 100000.0 };
+let mt5AccountInfo = { account: 41311493, broker: 'Deriv-Demo', balance: 10000.0, equity: 10000.0, margin_free: 10000.0 };
 let stcAuditLogs = [
   '[' + new Date().toISOString().substring(11, 19) + '] Manisoft_STC_Bot Cloud Core online (24/7 Render)',
-  '[' + new Date().toISOString().substring(11, 19) + '] Attached to MT5 Demo #5058082931 on MetaQuotes-Demo',
+  '[' + new Date().toISOString().substring(11, 19) + '] Attached to Deriv MT5 Demo #41311493 on Deriv-Demo',
   '[' + new Date().toISOString().substring(11, 19) + '] Real-time multi-timeframe streaming active (Commodities & FX)',
   '[' + new Date().toISOString().substring(11, 19) + '] Multi-Account Vault & Best Bet Matrix synchronized'
 ];
@@ -2492,6 +2492,7 @@ const server = http.createServer(async (req, res) => {
     pathname.startsWith('/api/candles') ||
     pathname.startsWith('/api/bridge') ||
     pathname.startsWith('/api/broker') ||
+    pathname === '/api/account/equity' ||
     (req.method === 'GET' && (
       pathname === '/api/stc/status' ||
       pathname.startsWith('/api/trades') ||
@@ -2560,18 +2561,9 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    let displayEquity = stcDemoEquity;
-    let displayCash = stcDemoEquity;
-    if (brokerMode === 'mt5') {
-      displayEquity = mt5AccountInfo.equity || stcDemoEquity;
-      displayCash = mt5AccountInfo.balance || stcDemoEquity;
-    } else if (brokerMode === 'deriv') {
-      displayEquity = 10000.0;
-      displayCash = 10000.0;
-    } else {
-      displayEquity = (mt5AccountInfo.equity || stcDemoEquity) + 10000.0;
-      displayCash = (mt5AccountInfo.balance || stcDemoEquity) + 10000.0;
-    }
+    // Live Deriv Demo initial balance calibration ($10,000.00 USD)
+    const accurateBalance = mt5AccountInfo.balance || stcDemoEquity || 10000.0;
+    const accurateEquity = mt5AccountInfo.equity || stcDemoEquity || 10000.0;
 
     return sendJSON(res, {
       bot_name: 'Manisoft_STC_Bot',
@@ -2580,8 +2572,8 @@ const server = http.createServer(async (req, res) => {
       broker_mode: brokerMode,
       mode: (act && act.mode) ? act.mode.toUpperCase() : 'TESTNET',
       exchange: brokerMode === 'simultaneous' ? 'DUAL SIMULTANEOUS (MT5 + DERIV API)' : (brokerMode === 'deriv' ? 'DERIV DIRECT API' : ((act && act.platform_name) ? act.platform_name : 'MT5')),
-      equity: displayEquity,
-      cash: displayCash,
+      equity: accurateEquity,
+      cash: accurateBalance,
       unrealized_pnl: 0.0,
       daily_pnl: 0.0,
       circuit_breaker: {
@@ -3046,8 +3038,8 @@ const server = http.createServer(async (req, res) => {
         server: mt5Acc.server || 'Deriv-Demo',
         connected: (Date.now() - lastBridgeSync < 20000),
         last_sync: lastBridgeSync,
-        balance: mt5AccountInfo.balance || stcDemoEquity,
-        equity: mt5AccountInfo.equity || stcDemoEquity,
+        balance: mt5AccountInfo.balance || stcDemoEquity || 10000.0,
+        equity: mt5AccountInfo.equity || stcDemoEquity || 10000.0,
         positions: stcOpenPositions.filter(p => !p.gateway || p.gateway === 'MT5').length
       },
       deriv: {
@@ -3058,7 +3050,7 @@ const server = http.createServer(async (req, res) => {
         token_configured: true,
         token_masked: 'pat_••••••••••••••••••••••••',
         connected: true,
-        balance: 10000.0,
+        balance: mt5AccountInfo.balance || stcDemoEquity || 10000.0,
         currency: 'USD',
         active_contracts: stcOpenPositions.filter(p => p.gateway === 'DERIV_API').length
       }
@@ -3261,6 +3253,20 @@ const server = http.createServer(async (req, res) => {
     }
     addStcLog(`Global lot size adjusted to ${lotSize} lots.`);
     return sendJSON(res, { status: 'SUCCESS', lot_size: lotSize });
+  }
+
+  if ((pathname === '/api/account/equity' || pathname === '/api/equity') && req.method === 'POST') {
+    const body = await parseBody(req);
+    const newBal = parseFloat(body.balance !== undefined ? body.balance : body.equity);
+    if (!isNaN(newBal) && newBal >= 0) {
+      stcDemoEquity = newBal;
+      mt5AccountInfo.balance = newBal;
+      mt5AccountInfo.equity = newBal;
+      mt5AccountInfo.margin_free = newBal;
+      addStcLog(`Account balance calibrated to $${newBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD.`);
+      return sendJSON(res, { success: true, balance: newBal, equity: newBal });
+    }
+    return sendJSON(res, { success: false, error: 'Invalid balance value' }, 400);
   }
 
   if (pathname === '/api/toggle' && req.method === 'POST') {
