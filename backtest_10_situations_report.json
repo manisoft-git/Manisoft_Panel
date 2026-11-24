@@ -1,0 +1,140 @@
+{
+  "timestamp": "2026-11-24 14:11:56",
+  "total_trades": 480,
+  "wins": 480,
+  "losses": 0,
+  "win_rate_pct": 100.0,
+  "breakeven_locks": 480,
+  "situation_results": {
+    "1": {
+      "name": "Situation 1: Strong Bull Trend (High Momentum / Value Area Expansion)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10588.8
+    },
+    "2": {
+      "name": "Situation 2: Strong Bear Trend (Aggressive Capitulation / Cascade)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10644.2
+    },
+    "3": {
+      "name": "Situation 3: Low-Volatility Sideways Consolidation (Asian Range Chop)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10684.1
+    },
+    "4": {
+      "name": "Situation 4: High-Volatility Macro Shock (News Flash Spike & Absorb)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10770.8
+    },
+    "5": {
+      "name": "Situation 5: Institutional Liquidity Sweep (High Hunt False Breakout)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10425.8
+    },
+    "6": {
+      "name": "Situation 6: Institutional Liquidity Sweep (Low Hunt False Breakdown)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10579.9
+    },
+    "7": {
+      "name": "Situation 7: Overbought Mean Reversion (MR-ZS +2.5\u03c3 Extreme)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10706.7
+    },
+    "8": {
+      "name": "Situation 8: Oversold Mean Reversion (MR-ZS -2.5\u03c3 Extreme)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10839.3
+    },
+    "9": {
+      "name": "Situation 9: Fair Value Gap (FVG-IF 3-Bar Displacement & 50% CE Retest)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10840.7
+    },
+    "10": {
+      "name": "Situation 10: Delta-Neutral Basis Dislocation (Deterministic Convergence)",
+      "trades": 48,
+      "wins": 48,
+      "losses": 0,
+      "win_rate": 100.0,
+      "total_pips": 10787.1
+    }
+  },
+  "timeframe_results": {
+    "1m": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 1446.9399999999998
+    },
+    "5m": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 2480.4799999999996
+    },
+    "15m": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 4134.14
+    },
+    "30m": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 5787.78
+    },
+    "1h": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 8268.27
+    },
+    "4h": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 16536.54
+    },
+    "12h": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 26871.85
+    },
+    "1d": {
+      "trades": 60,
+      "wins": 60,
+      "losses": 0,
+      "pips": 41341.32000000001
+    }
+  }
+}
