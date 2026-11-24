@@ -101,6 +101,9 @@
             <button id="btnBrokerDual" onclick="setBrokerMode('simultaneous')" class="px-3 py-1.5 rounded text-xs font-mono font-bold transition flex items-center gap-1.5 bg-cyan-600 text-white border border-cyan-400 shadow-md shadow-cyan-900/40 ring-1 ring-cyan-400" title="Simultaneous Multi-Broker Routing to both MT5 and Deriv API">
                 <span>⚡</span> DUAL SIMULTANEOUS <span class="text-[10px] bg-cyan-950/80 px-1 py-0.2 rounded text-cyan-300 border border-cyan-700/60 font-bold">ALL CONNECTED</span>
             </button>
+            <button onclick="configureDerivToken()" class="px-2.5 py-1.5 rounded text-xs font-mono font-bold transition flex items-center gap-1 bg-amber-950/80 text-amber-300 border border-amber-600/70 hover:bg-amber-900" title="Configure or update your Deriv API Key / Token">
+                <span>🔑</span> API TOKEN
+            </button>
         </div>
 
         <!-- Live Broker Health Stats -->
@@ -236,10 +239,11 @@
                             <th class="pb-2">SL</th>
                             <th class="pb-2">TP</th>
                             <th class="pb-2 text-right">UNREALIZED</th>
+                            <th class="pb-2 text-right pr-2">ACTION</th>
                         </tr>
                     </thead>
                     <tbody id="positionsTableBody">
-                        <tr><td colspan="10" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>
+                        <tr><td colspan="11" class="text-center py-4 text-slate-500">No active positions. Watching market...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1099,12 +1103,13 @@
                                 <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/70">${stratDisp}</span></td>
                                 <td class="py-2.5">${gwBadge}</td>
                                 <td class="py-2.5 font-bold ${sideColor}">${pos.side}</td>
-                                <td class="py-2.5">${pos.quantity}</td>
+                                <td class="py-2.5">${pos.quantity || pos.volume || 0.01}</td>
                                 <td class="py-2.5">$${entryDisp}</td>
                                 <td class="py-2.5">$${curDisp}</td>
                                 <td class="py-2.5 text-rose-400">$${slDisp}</td>
                                 <td class="py-2.5 text-emerald-400">$${tpDisp}</td>
                                 <td class="py-2.5 text-right font-bold ${pnlColor}">$${pnlDisp}</td>
+                                <td class="py-2.5 text-right pr-2"><button onclick="closePositionManual('${pos.ticket}')" class="px-2 py-0.5 rounded bg-rose-950/70 text-rose-300 border border-rose-800 hover:bg-rose-900 text-[10px] font-bold">✕ CLOSE</button></td>
                             </tr>
                         `;
                     }
@@ -2485,15 +2490,57 @@
                 const mt5Text = document.getElementById('mt5StatusText');
                 const mt5Pulse = document.getElementById('mt5Pulse');
                 if (mt5Text) {
-                    mt5Text.innerText = brokerData.mt5.connected ? 'Bridge Connected' : 'Standby (41311493)';
+                    mt5Text.innerText = (brokerData.mt5 && brokerData.mt5.connected) ? 'Bridge Connected' : 'Standby (41311493)';
                 }
                 if (mt5Pulse) {
-                    mt5Pulse.className = brokerData.mt5.connected ? 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-slate-400';
+                    mt5Pulse.className = (brokerData.mt5 && brokerData.mt5.connected) ? 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-slate-400';
                 }
                 const derivText = document.getElementById('derivStatusText');
                 if (derivText) {
-                    derivText.innerText = brokerData.deriv.connected ? 'WebSocket Online' : 'Standby';
+                    derivText.innerText = (brokerData.deriv && brokerData.deriv.authorized) ? 'WebSocket Live & Authorized' : ((brokerData.deriv && brokerData.deriv.connected) ? 'WebSocket Connected' : 'Standby');
                 }
+            }
+        }
+
+        async function configureDerivToken() {
+            const token = prompt("Enter your Deriv API Token (from app.deriv.com > Settings > API Token):");
+            if (token !== null && token.trim() !== "") {
+                try {
+                    const res = await fetch('/api/deriv/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: token.trim() })
+                    });
+                    const d = await res.json();
+                    if (d.success) {
+                        alert("✅ Deriv API Token saved and WebSocket authorized!");
+                        loadBrokerStatus();
+                        updateStatus();
+                    } else {
+                        alert("❌ Failed to set Deriv Token: " + (d.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert("Error configuring Deriv token: " + e.message);
+                }
+            }
+        }
+
+        async function closePositionManual(ticket) {
+            if (!confirm(`Are you sure you want to close position #${ticket}?`)) return;
+            try {
+                const res = await fetch('/api/position/close', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticket: ticket })
+                });
+                const d = await res.json();
+                if (d.success) {
+                    updateStatus();
+                } else {
+                    alert("Failed to close position: " + (d.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert("Error closing position: " + e.message);
             }
         }
 
